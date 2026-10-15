@@ -48,9 +48,24 @@ Dự án đã nạp sẵn 20 mã code để kiểm thử:
 - **Framework**: Next.js 16 (App Router) + React 19 + TypeScript
 - **Styling**: Vanilla CSS Modules (bảng màu pastel Tóc Tie: Navy `#1E2D6B`, Pastel Blue `#B8CCE4`, Pastel Pink `#F4C5D3`, Warm Cream `#F5EFE0`)
 - **Typography**: Shantell Sans & Noto Sans (Google Fonts)
-- **Backend / Store**: Next.js Route Handlers (`/api/auth`, `/api/redeem`, `/api/admin`) + in-memory data store
+- **Backend & Database**: Next.js 16 Route Handlers (`/api/auth`, `/api/redeem`, `/api/admin`) + **Supabase PostgreSQL** (`@supabase/supabase-js`) kèm cơ chế fallback in-memory dự phòng thông minh.
 
 ---
+
+## 🗄️ Cấu Hình Supabase Database
+
+Dự án đã được tích hợp sẵn với Supabase:
+
+1. **Thông tin kết nối** (lưu trong `.env.local`):
+   - `NEXT_PUBLIC_SUPABASE_URL`: `https://ylydytwnzelogiwurxcl.supabase.co`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: `your-publishable-key`
+   - `SUPABASE_SERVICE_ROLE_KEY`: `your-secret-key`
+
+2. **Khởi tạo bảng trong Supabase**:
+   - Truy cập Supabase Dashboard: [https://supabase.com/dashboard/project/ylydytwnzelogiwurxcl](https://supabase.com/dashboard/project/ylydytwnzelogiwurxcl)
+   - Chọn mục **SQL Editor** -> Tạo **New query**.
+   - Dán nội dung từ tệp [`supabase/schema.sql`](file:///c:/Users/Admin/.agents/toc-tie-loyalty/supabase/schema.sql) và nhấn **Run**.
+   - Hệ thống sẽ tự động tạo bảng `users`, `redemption_codes`, thiết lập RLS và nạp sẵn 20 mã dự thưởng khởi đầu.
 
 ## 🚀 Hướng Dẫn Cài Đặt & Chạy Môi Trường Cục Bộ
 

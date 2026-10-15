@@ -2,7 +2,7 @@
 // Secret: query param ?secret=toctie1234
 
 import { NextRequest, NextResponse } from "next/server";
-import { getStore } from "@/lib/store";
+import { getAdminData, addBatchCodes, testSupabaseConnection } from "@/lib/db";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET || "toctie1234";
 
@@ -14,33 +14,25 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const store = getStore();
-
-  // Build user list
-  const users = Array.from(store.users.values()).map((u) => ({
-    id: u.id,
-    fullName: u.fullName,
-    createdAt: u.createdAt,
-    unlockedPieces: u.unlockedPieces,
-    pieceCount: u.unlockedPieces.length,
-    isComplete: u.unlockedPieces.length === 4,
-    redeemedCodes: u.redeemedCodes,
-  }));
-
-  // Build code stats
-  const codes = Array.from(store.codes.values()).map((c) => ({
-    code: c.code,
-    isUsed: c.isUsed,
-    usedBy: c.usedBy,
-    usedAt: c.usedAt,
-  }));
+  const [{ users, codes }, dbStatus] = await Promise.all([
+    getAdminData(),
+    testSupabaseConnection(),
+  ]);
 
   const stats = {
-    totalUsers: store.users.size,
+    totalUsers: users.length,
     completedUsers: users.filter((u) => u.isComplete).length,
-    totalCodes: store.codes.size,
+    totalCodes: codes.length,
     usedCodes: codes.filter((c) => c.isUsed).length,
     unusedCodes: codes.filter((c) => !c.isUsed).length,
+    db: {
+      type: "Supabase PostgreSQL",
+      connected: dbStatus.connected,
+      tablesReady: dbStatus.tablesReady,
+      notice: dbStatus.tablesReady
+        ? "Đang kết nối trực tiếp với cơ sở dữ liệu Supabase."
+        : "Supabase đã kết nối. Cần chạy schema.sql trong SQL Editor của Supabase để khởi tạo bảng.",
+    },
   };
 
   return NextResponse.json({ stats, users, codes });
@@ -62,20 +54,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "codes phải là một mảng không rỗng" }, { status: 400 });
   }
 
-  const store = getStore();
-  const added: string[] = [];
-  const skipped: string[] = [];
-
-  for (const rawCode of codes) {
-    const code = rawCode.trim().toUpperCase();
-    if (!code) continue;
-    if (store.codes.has(code)) {
-      skipped.push(code);
-    } else {
-      store.codes.set(code, { code, isUsed: false });
-      added.push(code);
-    }
-  }
+  const { added, skipped } = await addBatchCodes(codes);
 
   return NextResponse.json({
     message: `Đã thêm ${added.length} mã, bỏ qua ${skipped.length} mã trùng.`,

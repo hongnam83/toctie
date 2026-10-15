@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getStore } from "@/lib/store";
+import { findUserById, getRedemptionCode, redeemCode } from "@/lib/db";
 
 // POST /api/redeem — redeem a code for a user
 export async function POST(req: Request) {
@@ -13,8 +13,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const store = getStore();
-    const user = store.users.get(userId);
+    const user = await findUserById(userId);
 
     if (!user) {
       return NextResponse.json(
@@ -24,7 +23,7 @@ export async function POST(req: Request) {
     }
 
     const normalizedCode = code.trim().toUpperCase();
-    const redemptionCode = store.codes.get(normalizedCode);
+    const redemptionCode = await getRedemptionCode(normalizedCode);
 
     // Check code exists
     if (!redemptionCode) {
@@ -68,25 +67,19 @@ export async function POST(req: Request) {
     const randomIndex = Math.floor(Math.random() * lockedPieces.length);
     const newPiece = lockedPieces[randomIndex];
 
-    // Mark code as used
-    redemptionCode.isUsed = true;
-    redemptionCode.usedBy = user.fullName; // Store name for admin readability
-    redemptionCode.usedAt = new Date().toISOString();
+    // Persist redemption to Supabase / store
+    const { unlockedPieces } = await redeemCode(user, normalizedCode, newPiece);
 
-    // Update user
-    user.unlockedPieces.push(newPiece);
-    user.redeemedCodes.push(normalizedCode);
-
-    const isComplete = user.unlockedPieces.length === 4;
+    const isComplete = unlockedPieces.length === 4;
 
     return NextResponse.json({
       success: true,
       newPiece,
-      unlockedPieces: user.unlockedPieces,
+      unlockedPieces,
       isComplete,
       message: isComplete
         ? "🎉 Chúc mừng! Bạn đã hoàn thành bộ sưu tập!"
-        : `✨ Mảnh ghép thứ ${user.unlockedPieces.length} đã được mở!`,
+        : `✨ Mảnh ghép thứ ${unlockedPieces.length} đã được mở!`,
     });
   } catch {
     return NextResponse.json({ error: "Lỗi server. Vui lòng thử lại." }, { status: 500 });
@@ -103,8 +96,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Thiếu userId." }, { status: 400 });
     }
 
-    const store = getStore();
-    const user = store.users.get(userId);
+    const user = await findUserById(userId);
 
     if (!user) {
       return NextResponse.json({ error: "Không tìm thấy tài khoản." }, { status: 404 });

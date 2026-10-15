@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getStore, simpleHash, generateId } from "@/lib/store";
+import { findUserByName, createUser, simpleHash } from "@/lib/db";
 
 export async function POST(req: Request) {
   try {
@@ -13,29 +13,19 @@ export async function POST(req: Request) {
     }
 
     const name = fullName.trim();
-    const store = getStore();
     const passwordHash = simpleHash(password);
 
     if (action === "register") {
-      // Check if name already exists
-      if (store.usersByName.has(name.toLowerCase())) {
+      // Check if user already exists
+      const existing = await findUserByName(name);
+      if (existing) {
         return NextResponse.json(
           { error: "Tên này đã được đăng ký. Vui lòng đăng nhập." },
           { status: 409 }
         );
       }
 
-      const id = generateId();
-      const user = {
-        id,
-        fullName: name,
-        passwordHash,
-        createdAt: new Date().toISOString(),
-        unlockedPieces: [] as number[],
-        redeemedCodes: [] as string[],
-      };
-      store.users.set(id, user);
-      store.usersByName.set(name.toLowerCase(), id);
+      const user = await createUser(name, passwordHash);
 
       return NextResponse.json({
         success: true,
@@ -49,16 +39,15 @@ export async function POST(req: Request) {
     }
 
     if (action === "login") {
-      const userId = store.usersByName.get(name.toLowerCase());
-      if (!userId) {
+      const user = await findUserByName(name);
+      if (!user) {
         return NextResponse.json(
           { error: "Không tìm thấy tài khoản. Vui lòng kiểm tra lại tên." },
           { status: 404 }
         );
       }
 
-      const user = store.users.get(userId);
-      if (!user || user.passwordHash !== passwordHash) {
+      if (user.passwordHash !== passwordHash) {
         return NextResponse.json(
           { error: "Mật khẩu không đúng. Vui lòng thử lại." },
           { status: 401 }

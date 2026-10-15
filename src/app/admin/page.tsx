@@ -11,6 +11,12 @@ interface AdminStats {
   totalCodes: number;
   usedCodes: number;
   unusedCodes: number;
+  db?: {
+    type: string;
+    connected: boolean;
+    tablesReady: boolean;
+    notice: string;
+  };
 }
 
 interface AdminUser {
@@ -157,6 +163,45 @@ export default function AdminPage() {
       </header>
 
       <main className={styles.main}>
+        {/* Database Status Banner */}
+        {stats?.db && (
+          <div
+            style={{
+              padding: "12px 18px",
+              borderRadius: "12px",
+              marginBottom: "20px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              background: stats.db.tablesReady ? "rgba(46, 125, 50, 0.1)" : "rgba(230, 81, 0, 0.1)",
+              border: stats.db.tablesReady ? "1px solid rgba(46, 125, 50, 0.3)" : "1px solid rgba(230, 81, 0, 0.3)",
+              fontSize: "0.9rem",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span style={{ fontSize: "1.2rem" }}>{stats.db.tablesReady ? "🟢" : "⚡"}</span>
+              <div>
+                <strong>Cơ sở dữ liệu: {stats.db.type}</strong>
+                <div style={{ color: "var(--color-navy-light)", fontSize: "0.82rem", marginTop: "2px" }}>
+                  {stats.db.notice}
+                </div>
+              </div>
+            </div>
+            <span
+              style={{
+                fontSize: "0.78rem",
+                padding: "4px 10px",
+                borderRadius: "20px",
+                fontWeight: 600,
+                background: stats.db.tablesReady ? "#2e7d32" : "#e65100",
+                color: "#fff",
+              }}
+            >
+              {stats.db.tablesReady ? "ĐANG HOẠT ĐỘNG" : "ĐÃ KẾT NỐI (CHỜ BẢNG)"}
+            </span>
+          </div>
+        )}
+
         {/* Stats cards */}
         {stats && (
           <div className={styles.statsGrid}>
