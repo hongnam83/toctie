@@ -77,7 +77,15 @@ export default function WinModal({ user, onClose }: Props) {
               }} />
             ))}
           </div>
-          <div className={styles.bigEmoji}>🎉</div>
+          <div className={styles.bigRibbonBadge}>
+            <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+              <circle cx="32" cy="32" r="30" fill="#FAF6EE" stroke="#FFE066" strokeWidth="3" />
+              <path d="M18 26C12 18 20 12 28 22C30 24 32 28 32 28C32 28 34 24 36 22C44 12 52 18 46 26C42 32 32 40 32 40C32 40 22 32 18 26Z" fill="#F4C5D3" stroke="#1E2D6B" strokeWidth="2" />
+              <circle cx="32" cy="27" r="4" fill="#1E2D6B" />
+              <path d="M29 30L23 48L28 45L31 34" fill="#F4C5D3" stroke="#1E2D6B" strokeWidth="1.5" />
+              <path d="M35 30L41 48L36 45L33 34" fill="#F4C5D3" stroke="#1E2D6B" strokeWidth="1.5" />
+            </svg>
+          </div>
         </div>
 
         <div className={styles.content}>
@@ -95,7 +103,15 @@ export default function WinModal({ user, onClose }: Props) {
 
           {/* Prize teaser */}
           <div className={styles.prizeBox}>
-            <div className={styles.prizeIcon}>🎁</div>
+            <div className={styles.prizeIcon}>
+              <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                <rect x="6" y="16" width="28" height="20" rx="4" fill="#FAF6EE" stroke="#1E2D6B" strokeWidth="2.2" />
+                <rect x="4" y="11" width="32" height="7" rx="3" fill="#F4C5D3" stroke="#1E2D6B" strokeWidth="2" />
+                <rect x="17" y="11" width="6" height="25" fill="#F4C5D3" stroke="#1E2D6B" strokeWidth="1.5" />
+                <path d="M20 11C16 4 10 9 16 11Z" fill="#F4C5D3" stroke="#1E2D6B" strokeWidth="1.5" />
+                <path d="M20 11C24 4 30 9 24 11Z" fill="#F4C5D3" stroke="#1E2D6B" strokeWidth="1.5" />
+              </svg>
+            </div>
             <div className={styles.prizeContent}>
               <div className={styles.prizeTitle}>Phần thưởng của bạn</div>
               <div className={styles.prizeDesc}>
@@ -117,7 +133,12 @@ export default function WinModal({ user, onClose }: Props) {
             </div>
             <div className={styles.receiptRow}>
               <span>Trạng thái</span>
-              <span className={styles.receiptBadge}>✅ Hoàn thành</span>
+              <span className={styles.receiptBadge}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                Hoàn thành
+              </span>
             </div>
           </div>
 
@@ -145,7 +166,7 @@ export default function WinModal({ user, onClose }: Props) {
           </div>
 
           <p className={styles.footerNote}>
-            🎀 tie your happiness — tóc.tie
+            tie your happiness — tóc.tie
           </p>
         </div>
       </div>

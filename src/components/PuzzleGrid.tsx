@@ -9,33 +9,29 @@ export const PIECE_INFO = [
     id: 0,
     name: "Trái tim",
     subtitle: "Scrunchie lụa thắt nơ",
-    icon: "🎀",
     color: "#F4C5D3",
-    tag: "Góc 1 · Tây Bắc",
+    tag: "Góc 1",
   },
   {
     id: 1,
     name: "Nụ cười",
     subtitle: "Gương mini hoa xinh",
-    icon: "🌸",
     color: "#B8CCE4",
-    tag: "Góc 2 · Đông Bắc",
+    tag: "Góc 2",
   },
   {
     id: 2,
     name: "Ánh sao",
-    subtitle: "Ruy băng & sao sáng",
-    icon: "✨",
+    subtitle: "Ruy băng & ánh sao",
     color: "#FFF3C4",
-    tag: "Góc 3 · Tây Nam",
+    tag: "Góc 3",
   },
   {
     id: 3,
     name: "Hạnh phúc",
     subtitle: "Hộp quà 20/10 yêu thương",
-    icon: "💖",
     color: "#C8EDDD",
-    tag: "Góc 4 · Đông Nam",
+    tag: "Góc 4",
   },
 ];
 
@@ -62,17 +58,14 @@ function PieceArtwork({ pieceIndex }: { pieceIndex: number }) {
           </radialGradient>
         </defs>
 
-        {/* Base background with subtle cream tone */}
         <rect width="200" height="200" fill="#FAF6EE" />
-        {/* Soft vertical brand stripes */}
         {[0, 24, 48, 72, 96, 120, 144, 168, 192].map((x) => (
           <rect key={x} x={x} y="0" width="10" height="200" fill="#D6E5F3" opacity="0.35" />
         ))}
         <circle cx="100" cy="100" r="80" fill="url(#softGlow0)" opacity="0.7" />
 
-        {/* Fluffy Scrunchie Ring (cloud-like puffs) */}
+        {/* Fluffy Scrunchie Ring */}
         <g transform="translate(100,95)">
-          {/* Outer ruffles */}
           {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((deg, i) => {
             const rad = (deg * Math.PI) / 180;
             const cx = Math.cos(rad) * 44;
@@ -90,33 +83,27 @@ function PieceArtwork({ pieceIndex }: { pieceIndex: number }) {
               />
             );
           })}
-          {/* Inner donut cut */}
           <circle cx="0" cy="0" r="26" fill="#FAF6EE" stroke="#1E2D6B" strokeWidth="2" />
           <circle cx="0" cy="0" r="20" fill="#D6E5F3" opacity="0.4" />
 
           {/* Ribbon Bow tied to scrunchie */}
           <g transform="translate(0, 22)">
-            {/* Left loop */}
             <path d="M0,0 C-24,-18 -38,10 -12,8 Z" fill="#1E2D6B" />
-            {/* Right loop */}
             <path d="M0,0 C24,-18 38,10 12,8 Z" fill="#1E2D6B" />
-            {/* Center knot */}
             <circle cx="0" cy="0" r="6" fill="#F4C5D3" stroke="#1E2D6B" strokeWidth="1.5" />
-            {/* Hanging ribbon tails */}
             <path d="M-3,4 Q-12,25 -16,36 Q-10,32 -6,34 Q-3,22 0,6" fill="#1E2D6B" />
             <path d="M3,4 Q12,25 16,36 Q10,32 6,34 Q3,22 0,6" fill="#1E2D6B" />
           </g>
 
-          {/* Floating pearls & sparkles */}
+          {/* Floating pearls & clean vector sparkles */}
           <circle cx="-55" cy="-35" r="4" fill="#FFFFFF" stroke="#1E2D6B" strokeWidth="1.5" />
           <circle cx="58" cy="-25" r="3" fill="#FFFFFF" stroke="#1E2D6B" strokeWidth="1.5" />
           <path d="M-40,-55 L-37,-45 L-27,-42 L-37,-39 L-40,-29 L-43,-39 L-53,-42 L-43,-45 Z" fill="#FFE066" stroke="#1E2D6B" strokeWidth="1" />
           <path d="M48,40 L50,46 L56,48 L50,50 L48,56 L46,50 L40,48 L46,46 Z" fill="#FFE066" stroke="#1E2D6B" strokeWidth="0.8" />
         </g>
 
-        {/* Caption */}
         <text x="100" y="185" textAnchor="middle" fontFamily="'Shantell Sans', cursive" fontSize="11" fontWeight="700" fill="#1E2D6B">
-          Scrunchie Lụa 🎀
+          Scrunchie Lụa
         </text>
       </svg>
     );
@@ -140,7 +127,6 @@ function PieceArtwork({ pieceIndex }: { pieceIndex: number }) {
         ))}
 
         <g transform="translate(100,95)">
-          {/* Mirror Handle */}
           <path d="M-6,45 L-9,85 Q0,92 9,85 L6,45 Z" fill="#F4C5D3" stroke="#1E2D6B" strokeWidth="2" />
           <circle cx="0" cy="76" r="3" fill="#FAF6EE" stroke="#1E2D6B" strokeWidth="1.2" />
 
@@ -164,29 +150,24 @@ function PieceArtwork({ pieceIndex }: { pieceIndex: number }) {
             );
           })}
 
-          {/* Outer Mirror Rim */}
           <circle cx="0" cy="0" r="42" fill="#F5EFE0" stroke="#1E2D6B" strokeWidth="2.2" />
-          {/* Mirror Reflective Face */}
           <circle cx="0" cy="0" r="36" fill="url(#mirrorGlass)" stroke="#1E2D6B" strokeWidth="1.5" />
-          {/* Mirror light glint */}
           <path d="M-15,-20 Q-5,-25 15,-15 Q25,-5 20,15" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" fill="none" opacity="0.9" />
           <circle cx="16" cy="18" r="2.5" fill="#FFFFFF" />
 
-          {/* Cute Smile / Wink on mirror */}
+          {/* Handcrafted cute smile on mirror */}
           <path d="M-12,2 Q-6,8 0,2" stroke="#1E2D6B" strokeWidth="1.8" fill="none" strokeLinecap="round" />
           <path d="M4,2 Q10,8 16,2" stroke="#1E2D6B" strokeWidth="1.8" fill="none" strokeLinecap="round" />
           <path d="M-4,10 Q2,16 8,10" stroke="#1E2D6B" strokeWidth="1.8" fill="none" strokeLinecap="round" />
-          {/* Blush circles */}
           <circle cx="-14" cy="8" r="3" fill="#F4C5D3" />
           <circle cx="18" cy="8" r="3" fill="#F4C5D3" />
 
-          {/* Mini Sparkles */}
           <path d="M-55,-40 L-53,-32 L-45,-30 L-53,-28 L-55,-20 L-57,-28 L-65,-30 L-57,-32 Z" fill="#FFE066" stroke="#1E2D6B" strokeWidth="1" />
           <circle cx="55" cy="-45" r="4" fill="#F4C5D3" stroke="#1E2D6B" strokeWidth="1.2" />
         </g>
 
         <text x="100" y="185" textAnchor="middle" fontFamily="'Shantell Sans', cursive" fontSize="11" fontWeight="700" fill="#1E2D6B">
-          Gương Xinh Tỏa Sáng 🌸
+          Gương Hoa Cúc Mini
         </text>
       </svg>
     );
@@ -202,7 +183,6 @@ function PieceArtwork({ pieceIndex }: { pieceIndex: number }) {
         ))}
 
         <g transform="translate(100,95)">
-          {/* Elegant Ribbon banner wave */}
           <path
             d="M-70,30 C-30,-20 30,-20 70,30 C45,35 20,20 0,22 C-20,24 -45,38 -70,30 Z"
             fill="#FFF3C4"
@@ -210,7 +190,7 @@ function PieceArtwork({ pieceIndex }: { pieceIndex: number }) {
             strokeWidth="2"
           />
 
-          {/* Big Central 4-point Diamond Star */}
+          {/* Central 4-point Diamond Star */}
           <g transform="translate(0, -10)">
             <path
               d="M0,-52 Q4,-12 36,0 Q4,12 0,52 Q-4,12 -36,0 Q-4,-12 0,-52 Z"
@@ -218,7 +198,6 @@ function PieceArtwork({ pieceIndex }: { pieceIndex: number }) {
               stroke="#1E2D6B"
               strokeWidth="2.2"
             />
-            {/* Inner star highlight */}
             <path
               d="M0,-30 Q2,-6 20,0 Q2,6 0,30 Q-2,6 -20,0 Q-2,-6 0,-30 Z"
               fill="#FFFFFF"
@@ -227,7 +206,6 @@ function PieceArtwork({ pieceIndex }: { pieceIndex: number }) {
             <circle cx="0" cy="0" r="4" fill="#1E2D6B" />
           </g>
 
-          {/* Floating accent stars & hearts */}
           <g transform="translate(-48, -40)">
             <path d="M0,-16 Q2,-4 12,0 Q2,4 0,16 Q-2,4 -12,0 Q-2,-4 0,-16 Z" fill="#F4C5D3" stroke="#1E2D6B" strokeWidth="1.5" />
           </g>
@@ -243,7 +221,7 @@ function PieceArtwork({ pieceIndex }: { pieceIndex: number }) {
         </g>
 
         <text x="100" y="185" textAnchor="middle" fontFamily="'Shantell Sans', cursive" fontSize="11" fontWeight="700" fill="#1E2D6B">
-          Ánh Sao Lung Linh ✨
+          Ruy Băng & Ánh Sao
         </text>
       </svg>
     );
@@ -265,25 +243,16 @@ function PieceArtwork({ pieceIndex }: { pieceIndex: number }) {
       ))}
 
       <g transform="translate(100,95)">
-        {/* Kraft Gift Box Base */}
         <rect x="-44" y="-12" width="88" height="66" rx="6" fill="url(#boxGrad)" stroke="#1E2D6B" strokeWidth="2.2" />
-        {/* Box Lid */}
         <rect x="-48" y="-24" width="96" height="18" rx="5" fill="#FAF6EE" stroke="#1E2D6B" strokeWidth="2.2" />
 
-        {/* Vertical Ribbon Wrap */}
         <rect x="-8" y="-24" width="16" height="78" fill="#F4C5D3" stroke="#1E2D6B" strokeWidth="1.6" />
-        {/* Horizontal Ribbon on Lid */}
         <rect x="-48" y="-20" width="96" height="10" fill="#F4C5D3" stroke="#1E2D6B" strokeWidth="1.2" opacity="0.7" />
 
-        {/* Big Fluffy Bow on top of Lid */}
         <g transform="translate(0, -24)">
-          {/* Left bow wing */}
           <path d="M0,0 C-26,-22 -36,-2 -10,3 Z" fill="#F4C5D3" stroke="#1E2D6B" strokeWidth="1.8" />
-          {/* Right bow wing */}
           <path d="M0,0 C26,-22 36,-2 10,3 Z" fill="#F4C5D3" stroke="#1E2D6B" strokeWidth="1.8" />
-          {/* Center Knot */}
           <circle cx="0" cy="0" r="6" fill="#1E2D6B" />
-          {/* Ribbons flowing down */}
           <path d="M-2,3 Q-14,20 -18,28" stroke="#1E2D6B" strokeWidth="2" fill="none" strokeLinecap="round" />
           <path d="M2,3 Q14,20 18,28" stroke="#1E2D6B" strokeWidth="2" fill="none" strokeLinecap="round" />
         </g>
@@ -293,17 +262,16 @@ function PieceArtwork({ pieceIndex }: { pieceIndex: number }) {
           <rect x="-14" y="-10" width="28" height="20" rx="3" fill="#FFFFFF" stroke="#1E2D6B" strokeWidth="1.4" />
           <circle cx="0" cy="-6" r="1.5" fill="#1E2D6B" />
           <text x="0" y="4" textAnchor="middle" fontFamily="'Shantell Sans', cursive" fontSize="7" fontWeight="700" fill="#1E2D6B">
-            20/10 💖
+            20/10
           </text>
         </g>
 
-        {/* Sparkles around box */}
         <circle cx="-56" cy="10" r="3" fill="#FFE066" stroke="#1E2D6B" strokeWidth="1" />
         <path d="M52,-45 L54,-38 L61,-36 L54,-34 L52,-27 L50,-34 L43,-36 L50,-38 Z" fill="#FFE066" stroke="#1E2D6B" strokeWidth="0.8" />
       </g>
 
       <text x="100" y="185" textAnchor="middle" fontFamily="'Shantell Sans', cursive" fontSize="11" fontWeight="700" fill="#1E2D6B">
-        Hộp Quà Yêu Thương 🎁
+        Hộp Quà Tặng 20/10
       </text>
     </svg>
   );
@@ -320,19 +288,15 @@ function LockedPiece({ pieceIndex }: { pieceIndex: number }) {
       {/* Decorative ribbon padlock icon */}
       <div className={styles.lockIconBox}>
         <svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
-          {/* Shackle */}
           <path
             d="M12 17V12C12 8.134 15.134 5 19 5C22.866 5 26 8.134 26 12V17"
             stroke="#1E2D6B"
             strokeWidth="2.5"
             strokeLinecap="round"
           />
-          {/* Lock Body */}
           <rect x="8" y="16" width="22" height="17" rx="5" fill="#FAF6EE" stroke="#1E2D6B" strokeWidth="2.2" />
-          {/* Keyhole */}
           <circle cx="19" cy="23" r="2.5" fill="#1E2D6B" />
           <path d="M19 25.5V29" stroke="#1E2D6B" strokeWidth="2" strokeLinecap="round" />
-          {/* Mini Ribbon Bow on top */}
           <g transform="translate(19, 5)">
             <path d="M0,0 C-7,-6 -10,0 -3,2 Z" fill="#F4C5D3" stroke="#1E2D6B" strokeWidth="1" />
             <path d="M0,0 C7,-6 10,0 3,2 Z" fill="#F4C5D3" stroke="#1E2D6B" strokeWidth="1" />
@@ -347,7 +311,8 @@ function LockedPiece({ pieceIndex }: { pieceIndex: number }) {
       </div>
 
       <div className={styles.lockPieceTag}>
-        <span className={styles.sparkleIcon}>✦</span> Nhập mã để mở
+        <span className={styles.lockPulseDot} />
+        <span>Nhập mã để mở</span>
       </div>
     </div>
   );
@@ -367,12 +332,11 @@ export default function PuzzleGrid({ unlockedPieces, newlyRevealedPiece }: Props
       className={`${styles.container} ${isComplete ? styles.containerComplete : ""}`}
       id="puzzle-board"
     >
-      {/* Decorative outer frame with stitch accents */}
+      {/* Outer Board Card */}
       <div className={styles.boardCard}>
         {/* Header indicator inside board */}
         <div className={styles.boardHeader}>
           <div className={styles.boardProgressBadge}>
-            <span className={styles.ribbonEmoji}>🎀</span>
             <span>Tiến trình: <strong>{unlockedPieces.length}/4 mảnh</strong></span>
           </div>
           <span className={styles.boardBrandSlogan}>tie your happiness</span>
@@ -406,14 +370,12 @@ export default function PuzzleGrid({ unlockedPieces, newlyRevealedPiece }: Props
 
                     {isNew && (
                       <div className={styles.newBadge}>
-                        <span>{info.icon}</span>
                         <span>Mới mở!</span>
                       </div>
                     )}
 
                     {/* Subtle info pill visible on hover */}
                     <div className={styles.pieceOverlay}>
-                      <span className={styles.pieceOverlayIcon}>{info.icon}</span>
                       <strong className={styles.pieceOverlayName}>Mảnh {pieceIndex + 1}: {info.name}</strong>
                       <span className={styles.pieceOverlaySub}>{info.subtitle}</span>
                     </div>
@@ -433,7 +395,6 @@ export default function PuzzleGrid({ unlockedPieces, newlyRevealedPiece }: Props
           <div className={styles.centerKnot} aria-hidden="true">
             <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
               <circle cx="22" cy="22" r="19" fill="#FDFCF8" stroke="#1E2D6B" strokeWidth="2.5" />
-              {/* Bow icon */}
               <g transform="translate(22, 22)">
                 <path d="M0,0 C-11,-10 -15,0 -5,3 Z" fill="#F4C5D3" stroke="#1E2D6B" strokeWidth="1.5" />
                 <path d="M0,0 C11,-10 15,0 5,3 Z" fill="#F4C5D3" stroke="#1E2D6B" strokeWidth="1.5" />
@@ -449,8 +410,8 @@ export default function PuzzleGrid({ unlockedPieces, newlyRevealedPiece }: Props
         <div className={styles.boardFooter}>
           <span className={styles.boardNote}>
             {isComplete
-              ? "🎉 Tuyệt vời! Bạn đã mở trọn vẹn 4 mảnh ghép!"
-              : "✦ Mỗi mã dự thưởng hợp lệ sẽ mở ngẫu nhiên 1 góc còn lại."}
+              ? "Bức tranh đã hoàn chỉnh với trọn vẹn 4 mảnh ghép."
+              : "Mỗi mã dự thưởng hợp lệ mở ngẫu nhiên một góc còn khóa."}
           </span>
         </div>
       </div>
@@ -458,10 +419,14 @@ export default function PuzzleGrid({ unlockedPieces, newlyRevealedPiece }: Props
       {/* Complete celebration banner overlay */}
       {isComplete && (
         <div className={styles.completeBanner}>
-          <span className={styles.completeEmoji}>🎉</span>
+          <div className={styles.completeIconBox}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1E2D6B" strokeWidth="2">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" fill="#FFE066" />
+            </svg>
+          </div>
           <div className={styles.completeInfo}>
             <div className={styles.completeTitle}>Chúc mừng! Tranh đã hoàn chỉnh</div>
-            <div className={styles.completeSub}>Bạn đã mở khóa phần quà 20/10 từ tóc.tie 🎀</div>
+            <div className={styles.completeSub}>Bạn đã mở khóa phần quà 20/10 từ tóc.tie</div>
           </div>
         </div>
       )}

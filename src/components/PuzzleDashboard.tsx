@@ -137,7 +137,10 @@ export default function PuzzleDashboard({
             className={`btn btn-secondary ${styles.adminIconBtn}`}
             title="Trang quản trị (Admin)"
           >
-            ⚙️
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
           </a>
         </div>
       </header>
@@ -146,9 +149,9 @@ export default function PuzzleDashboard({
       {showDemoBanner && (
         <div className={styles.demoBanner}>
           <div className={styles.demoBannerContent}>
-            <span className={styles.demoBannerIcon}>🎟️</span>
+            <span className={styles.demoBadgeText}>DEMO:</span>
             <span className={styles.demoBannerText}>
-              <strong>Mã thử nghiệm (Demo):</strong> Bấm vào một mã để tự động điền —{" "}
+              Bấm vào một mã thử nghiệm để tự động điền —{" "}
               {["TOCTIE-2010-AAAA", "TOCTIE-2010-BBBB", "TOCTIE-2010-CCCC", "TOCTIE-2010-DDDD"].map((c) => (
                 <code
                   key={c}
@@ -179,7 +182,12 @@ export default function PuzzleDashboard({
           <div className={styles.sideCard}>
             <div className={styles.sideCardHeader}>
               <div className={styles.sideTitle}>
-                <span className={styles.sideTitleIcon}>🔑</span>
+                <span className={styles.sideTitleIcon}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="7.5" cy="15.5" r="4.5" />
+                    <path d="m21 2-9.6 9.6M15.5 7.5l3 3M18.5 4.5l3 3" />
+                  </svg>
+                </span>
                 <span>Nhập mã dự thưởng</span>
               </div>
               <span className={styles.sideBadge}>1 mã / 1 mảnh</span>
@@ -187,7 +195,7 @@ export default function PuzzleDashboard({
 
             <p className={styles.sideDesc}>
               Mỗi sản phẩm phụ kiện <strong>tóc.tie</strong> bạn mua kèm theo một mã dự thưởng độc quyền.
-              Nhập mã vào ô dưới để mở ngẫu nhiên một góc còn khóa!
+              Nhập mã vào ô dưới để mở ngẫu nhiên một góc còn khóa.
             </p>
 
             <form onSubmit={handleRedeem} className={styles.codeForm} noValidate>
@@ -245,10 +253,10 @@ export default function PuzzleDashboard({
                     Đang xác thực...
                   </>
                 ) : isComplete ? (
-                  <>🎉 Đã mở trọn 4/4 mảnh ghép!</>
+                  <>Đã hoàn thành 4/4 mảnh ghép</>
                 ) : (
                   <>
-                    Mở mảnh ghép ✦
+                    <span>Mở mảnh ghép</span>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                       <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
@@ -282,11 +290,11 @@ export default function PuzzleDashboard({
               </div>
 
               <p className={styles.progressNote}>
-                {pieceCount === 0 && "Nhập mã đầu tiên để bắt đầu chuyến phiêu lưu! 🎀"}
-                {pieceCount === 1 && "Tuyệt vời! Bạn chỉ còn 3 mảnh nữa thôi ✨"}
-                {pieceCount === 2 && "Đã qua nửa chặng đường! Cố lên nhé 💙"}
-                {pieceCount === 3 && "Chỉ còn duy nhất 1 mảnh cuối cùng! 🔥"}
-                {pieceCount === 4 && "🎉 Hoàn thành! Phần quà 20/10 đang chờ bạn!"}
+                {pieceCount === 0 && "Nhập mã dự thưởng để mở mảnh ghép đầu tiên của bạn."}
+                {pieceCount === 1 && "Khởi đầu tuyệt vời! Còn 3 mảnh ghép để hoàn tất bức tranh."}
+                {pieceCount === 2 && "Đã hoàn thành 50% chặng đường! Tiếp tục khám phá nhé."}
+                {pieceCount === 3 && "Chỉ còn 1 mảnh ghép cuối cùng để nhận quà!"}
+                {pieceCount === 4 && "Bức tranh đã hoàn chỉnh! Hãy nhận phần quà 20/10 của bạn."}
               </p>
             </div>
 
@@ -298,19 +306,19 @@ export default function PuzzleDashboard({
                 type="button"
                 id="show-reward"
               >
-                🎁 Xem & Nhận phần thưởng ngay!
+                Nhận phần thưởng 20/10 ngay ➔
               </button>
             )}
 
             {/* How-to guide box */}
             <div className={styles.howToBox}>
               <div className={styles.howToTitle}>
-                <span>💡</span> Bạn cần hỗ trợ lấy mã?
+                Bạn cần hỗ trợ lấy mã?
               </div>
               <ul className={styles.howToList}>
-                <li>🛍️ Mua bất kỳ set quà nào tại tiệm tóc.tie</li>
-                <li>📦 Mã dự thưởng in trên tem hoặc thiệp hộp quà</li>
-                <li>🔒 Mỗi mã chỉ dùng được <strong>duy nhất 1 lần</strong></li>
+                <li>Mua bất kỳ set quà hoặc sản phẩm tại tiệm tóc.tie</li>
+                <li>Mã dự thưởng in trên tem hoặc thiệp trong hộp quà</li>
+                <li>Mỗi mã chỉ có giá trị sử dụng <strong>duy nhất một lần</strong></li>
               </ul>
             </div>
           </div>
@@ -322,7 +330,7 @@ export default function PuzzleDashboard({
             <div className={styles.puzzleBadge}>Bộ sưu tập 20/10 · tóc.tie</div>
             <h1 className={styles.puzzleTitle}>Bức Tranh Hạnh Phúc Của Bạn</h1>
             <p className={styles.puzzleSubtitle}>
-              Mỗi mảnh ghép đại diện cho một phụ kiện xinh xắn và sự nâng niu dành cho mái tóc nàng 🎀
+              Mỗi mảnh ghép đại diện cho một phụ kiện xinh xắn và sự nâng niu dành cho mái tóc nàng.
             </p>
           </div>
 

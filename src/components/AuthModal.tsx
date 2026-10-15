@@ -178,7 +178,13 @@ export default function AuthModal({ onClose, onSuccess }: Props) {
 
           {/* Friendly Note */}
           <div className={styles.inputNote}>
-            <span>💡</span>
+            <span className={styles.inputNoteIcon}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" />
+              </svg>
+            </span>
             <div>
               {tab === "login" ? (
                 <>
@@ -214,7 +220,7 @@ export default function AuthModal({ onClose, onSuccess }: Props) {
                 onClick={handleQuickRegister}
                 disabled={loading}
               >
-                🎉 Tạo mới tài khoản "{accountName.trim()}"
+                Tạo mới tài khoản "{accountName.trim()}" ➔
               </button>
             </div>
           )}
@@ -228,7 +234,7 @@ export default function AuthModal({ onClose, onSuccess }: Props) {
                 onClick={handleQuickLogin}
                 disabled={loading}
               >
-                🚀 Đăng nhập vào "{accountName.trim()}"
+                Đăng nhập vào "{accountName.trim()}" ➔
               </button>
             </div>
           )}

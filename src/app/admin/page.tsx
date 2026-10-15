@@ -329,7 +329,12 @@ export default function AdminPage() {
     return (
       <div className={styles.loginPage}>
         <div className={styles.loginCard}>
-          <div className={styles.loginLogo}>🔐</div>
+          <div className={styles.loginLogo}>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#1E2D6B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+          </div>
           <h1 className={styles.loginTitle}>Admin tóc.tie</h1>
           <p className={styles.loginSub}>Nhập mật khẩu admin để tiếp tục</p>
           <form onSubmit={handleLogin} className={styles.loginForm}>
@@ -366,7 +371,12 @@ export default function AdminPage() {
       {/* Header */}
       <header className={styles.header}>
         <div className={styles.headerLeft}>
-          <span className={styles.headerEmoji}>🔑</span>
+          <span className={styles.headerEmoji}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="8" cy="15" r="4" />
+              <path d="M10.85 12.15L19 4M18 5l2 2M15 8l2 2" />
+            </svg>
+          </span>
           <div>
             <h1 className={styles.headerTitle}>Admin Dashboard</h1>
             <p className={styles.headerSub}>
@@ -375,8 +385,15 @@ export default function AdminPage() {
           </div>
         </div>
         <div className={styles.headerRight}>
-          <button className="btn btn-secondary btn-sm" onClick={handleRefresh} disabled={loading}>
-            {loading ? <span className="spinner" style={{ width: 14, height: 14 }} /> : "🔄"} Làm mới
+          <button className="btn btn-secondary btn-sm" onClick={handleRefresh} disabled={loading} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+            {loading ? (
+              <span className="spinner" style={{ width: 14, height: 14 }} />
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+              </svg>
+            )}
+            Làm mới
           </button>
           <button className="btn btn-secondary btn-sm" onClick={() => setAuthed(false)}>
             Đăng xuất
@@ -405,9 +422,16 @@ export default function AdminPage() {
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <span style={{ fontSize: "1.2rem" }}>
-                {stats.db.tablesReady ? "🟢" : "⚡"}
-              </span>
+              <span
+                style={{
+                  display: "inline-block",
+                  width: "10px",
+                  height: "10px",
+                  borderRadius: "50%",
+                  background: stats.db.tablesReady ? "#2e7d32" : "#e65100",
+                  boxShadow: stats.db.tablesReady ? "0 0 8px rgba(46,125,50,0.5)" : "none",
+                }}
+              />
               <div>
                 <strong>Cơ sở dữ liệu: {stats.db.type}</strong>
                 <div
@@ -443,31 +467,62 @@ export default function AdminPage() {
               {
                 label: "Tổng tài khoản khách",
                 value: stats.totalUsers,
-                icon: "👥",
+                icon: (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                  </svg>
+                ),
                 color: styles.statBlue,
               },
               {
                 label: "Hoàn thành 4 mảnh",
                 value: stats.completedUsers,
-                icon: "🏆",
+                icon: (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+                    <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+                    <path d="M4 22h16" />
+                    <path d="M10 14.66V17c0 .55-.45 1-1 1H7" />
+                    <path d="M14 14.66V17c0 .55.45 1 1 1h2" />
+                    <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+                  </svg>
+                ),
                 color: styles.statGold,
               },
               {
                 label: "Tổng mã dự thưởng",
                 value: stats.totalCodes,
-                icon: "🎟️",
+                icon: (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="6" width="20" height="12" rx="2" />
+                    <circle cx="12" cy="12" r="2" />
+                    <path d="M6 12h.01M18 12h.01" />
+                  </svg>
+                ),
                 color: styles.statGray,
               },
               {
                 label: "Mã đã dùng",
                 value: stats.usedCodes,
-                icon: "✅",
+                icon: (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                ),
                 color: styles.statGreen,
               },
               {
                 label: "Mã còn lại",
                 value: stats.unusedCodes,
-                icon: "🔒",
+                icon: (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                ),
                 color: styles.statPink,
               },
             ].map((s, i) => (
@@ -486,13 +541,13 @@ export default function AdminPage() {
             className={`${styles.tab} ${tab === "users" ? styles.tabActive : ""}`}
             onClick={() => setTab("users")}
           >
-            👥 Tài khoản người dùng ({users.length})
+            Tài khoản người dùng ({users.length})
           </button>
           <button
             className={`${styles.tab} ${tab === "codes" ? styles.tabActive : ""}`}
             onClick={() => setTab("codes")}
           >
-            🎟️ Mã dự thưởng ({codes.length})
+            Mã dự thưởng ({codes.length})
           </button>
         </div>
 
@@ -510,7 +565,7 @@ export default function AdminPage() {
                 <input
                   type="text"
                   className={styles.searchInput}
-                  placeholder="🔍 Tìm theo tên tài khoản..."
+                  placeholder="Tìm theo tên tài khoản..."
                   value={userSearch}
                   onChange={(e) => setUserSearch(e.target.value)}
                 />
@@ -574,7 +629,7 @@ export default function AdminPage() {
                           </td>
                           <td>
                             {u.isComplete ? (
-                              <span className={styles.badgeComplete}>🏆 Hoàn thành</span>
+                              <span className={styles.badgeComplete}>Hoàn thành</span>
                             ) : (
                               <span className={styles.badgeInProgress}>
                                 {u.pieceCount}/4 mảnh
@@ -602,7 +657,7 @@ export default function AdminPage() {
                               onClick={() => handleOpenUserModal(u)}
                               title="Xem thông tin và hỗ trợ tài khoản này"
                             >
-                              👤 Quản lý
+                              Quản lý
                             </button>
                           </td>
                         </tr>
@@ -619,7 +674,7 @@ export default function AdminPage() {
           <div className={styles.codesLayout}>
             {/* Add codes form */}
             <div className={styles.addCard}>
-              <h2 className={styles.addTitle}>➕ Thêm mã mới</h2>
+              <h2 className={styles.addTitle}>Thêm mã mới</h2>
               <p className={styles.addSub}>
                 Nhập danh sách mã mới, phân cách bằng dấu phẩy, chấm phẩy hoặc xuống dòng.
               </p>
@@ -663,7 +718,7 @@ export default function AdminPage() {
                     marginBottom: "8px",
                   }}
                 >
-                  🧹 Dọn dẹp mã
+                  Dọn dẹp mã
                 </h3>
                 <button
                   type="button"
@@ -690,7 +745,7 @@ export default function AdminPage() {
                   <input
                     type="text"
                     className={styles.searchInput}
-                    placeholder="🔍 Tìm mã code hoặc người dùng..."
+                    placeholder="Tìm mã code hoặc người dùng..."
                     value={codeSearch}
                     onChange={(e) => setCodeSearch(e.target.value)}
                   />
@@ -727,7 +782,7 @@ export default function AdminPage() {
                       onClick={handleDeleteSelectedCodes}
                       disabled={deleteLoading}
                     >
-                      🗑️ Xóa {selectedCodes.length} mã đã chọn
+                      Xóa {selectedCodes.length} mã đã chọn
                     </button>
                     <button
                       type="button"
@@ -795,9 +850,9 @@ export default function AdminPage() {
                           </td>
                           <td>
                             {c.isUsed ? (
-                              <span className={styles.badgeUsed}>✅ Đã dùng</span>
+                              <span className={styles.badgeUsed}>Đã dùng</span>
                             ) : (
-                              <span className={styles.badgeUnused}>🔒 Chưa dùng</span>
+                              <span className={styles.badgeUnused}>Chưa dùng</span>
                             )}
                           </td>
                           <td>{c.usedBy || "—"}</td>
@@ -820,7 +875,7 @@ export default function AdminPage() {
                               disabled={deleteLoading}
                               title="Xóa mã này khỏi hệ thống"
                             >
-                              🗑️ Xóa
+                              Xóa
                             </button>
                           </td>
                         </tr>
@@ -840,7 +895,7 @@ export default function AdminPage() {
           <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
               <h3 className={styles.modalTitle}>
-                <span>👤</span> Quản lý tài khoản khách hàng
+                Quản lý tài khoản khách hàng
               </h3>
               <button
                 className={styles.modalCloseBtn}
@@ -875,7 +930,7 @@ export default function AdminPage() {
                     className="btn btn-primary btn-sm"
                     onClick={() => copyToClipboard(modalUser.fullName, "tên tài khoản")}
                   >
-                    📋 Sao chép tên tài khoản
+                    Sao chép tên tài khoản
                   </button>
                   <button
                     type="button"
@@ -887,7 +942,7 @@ export default function AdminPage() {
                       )
                     }
                   >
-                    💬 Sao chép tin nhắn gửi khách
+                    Sao chép tin nhắn gửi khách
                   </button>
                 </div>
                 {copyNotice && <div className={styles.copyNoticeToast} style={{ textAlign: "center" }}>{copyNotice}</div>}

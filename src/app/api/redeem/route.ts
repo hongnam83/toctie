@@ -52,7 +52,7 @@ export async function POST(req: Request) {
     // Check user already has 4 pieces
     if (user.unlockedPieces.length >= 4) {
       return NextResponse.json(
-        { error: "Bạn đã mở đủ 4 mảnh ghép rồi! Hãy nhận phần thưởng của bạn 🎁" },
+        { error: "Bạn đã mở đủ 4 mảnh ghép rồi! Hãy nhận phần thưởng của bạn." },
         { status: 400 }
       );
     }
@@ -78,8 +78,8 @@ export async function POST(req: Request) {
       unlockedPieces,
       isComplete,
       message: isComplete
-        ? "🎉 Chúc mừng! Bạn đã hoàn thành bộ sưu tập!"
-        : `✨ Mảnh ghép thứ ${unlockedPieces.length} đã được mở!`,
+        ? "Chúc mừng! Bạn đã hoàn thành bộ sưu tập 4 mảnh ghép!"
+        : `Mảnh ghép thứ ${unlockedPieces.length} đã được mở thành công.`,
     });
   } catch {
     return NextResponse.json({ error: "Lỗi server. Vui lòng thử lại." }, { status: 500 });

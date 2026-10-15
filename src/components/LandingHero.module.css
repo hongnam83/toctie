@@ -92,11 +92,12 @@
 }
 
 .headerCta {
+  display: inline-flex;
+  align-items: center;
   gap: 6px;
 }
 
 .headerCtaArrow {
-  font-size: 14px;
   transition: transform 0.2s ease;
 }
 
@@ -108,7 +109,7 @@
 .heroSection {
   position: relative;
   z-index: 10;
-  padding: 40px 48px 80px;
+  padding: 44px 48px 84px;
   width: 100%;
 }
 
@@ -135,7 +136,7 @@
   background: var(--pink-pastel);
   color: var(--navy);
   border: 1.5px solid var(--pink-deep);
-  padding: 8px 18px;
+  padding: 8px 20px;
   border-radius: 100px;
   font-size: 14px;
   font-weight: 700;
@@ -150,6 +151,12 @@
   background: var(--navy);
   flex-shrink: 0;
   animation: pulseGlow 2s ease-in-out infinite;
+}
+
+.badgeIconSvg {
+  display: flex;
+  align-items: center;
+  color: var(--navy);
 }
 
 .mainHeadline {
@@ -174,16 +181,11 @@
   bottom: 2px;
   left: 0;
   right: 0;
-  height: 8px;
+  height: 10px;
   background: var(--pink-pastel);
-  border-radius: 4px;
+  border-radius: 6px;
   z-index: -1;
   opacity: 0.9;
-}
-
-.ribbonEmoji {
-  display: inline-block;
-  animation: floatSlow 3s ease-in-out infinite;
 }
 
 .heroDescription {
@@ -202,9 +204,9 @@
 .miniStepsList {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   background: var(--white);
-  padding: 10px 18px;
+  padding: 8px 18px;
   border-radius: 100px;
   border: 2px solid var(--blue-light);
   margin-bottom: 36px;
@@ -215,14 +217,24 @@
 .miniStepItem {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 13px;
   font-weight: 700;
   color: var(--navy);
 }
 
-.miniStepIcon {
-  font-size: 16px;
+.miniStepNum {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--blue-pastel);
+  color: var(--navy);
+  font-size: 11px;
+  font-weight: 800;
+  font-family: 'Shantell Sans', cursive;
 }
 
 .miniStepDivider {
@@ -242,6 +254,9 @@
   font-size: 18px !important;
   padding: 18px 44px !important;
   border-radius: 100px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .ctaAssurance {
@@ -254,7 +269,8 @@
 
 .checkIcon {
   color: #059669;
-  font-weight: 700;
+  display: flex;
+  align-items: center;
 }
 
 .dotSeparator {
@@ -287,6 +303,9 @@
 }
 
 .teaserBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-size: 13px;
   font-weight: 700;
   color: var(--navy);
@@ -336,14 +355,16 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   text-align: center;
   padding: 12px;
 }
 
-.pieceIcon {
-  font-size: 28px;
-  filter: drop-shadow(0 2px 4px rgba(30, 45, 107, 0.15));
+.pieceIconSvgBox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 2px 4px rgba(30, 45, 107, 0.12));
 }
 
 .pieceName {
@@ -356,7 +377,7 @@
   font-size: 10px;
   font-weight: 700;
   color: var(--navy-light);
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.9);
   padding: 2px 8px;
   border-radius: 100px;
   border: 1px solid var(--blue-pastel);
@@ -377,10 +398,6 @@
   align-items: center;
   justify-content: center;
   box-shadow: 0 4px 10px rgba(30, 45, 107, 0.2);
-}
-
-.knotRibbon {
-  font-size: 20px;
 }
 
 .teaserFooter {
@@ -408,6 +425,9 @@
 }
 
 .teaserUnlockBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   background: var(--pink-pastel);
   color: var(--navy);
   border: 1.5px solid var(--navy);
@@ -426,7 +446,7 @@
   transform: translateY(-2px);
 }
 
-/* Floating stickers */
+/* Floating vector stickers */
 .floatStickerBow,
 .floatStickerStar1,
 .floatStickerStar2,
@@ -439,31 +459,25 @@
 
 .floatStickerBow {
   top: -24px;
-  right: -12px;
-  font-size: 42px;
+  right: -14px;
   animation-delay: 0s;
 }
 
 .floatStickerStar1 {
   bottom: 24px;
   right: -24px;
-  color: var(--yellow-vivid);
-  font-size: 26px;
   animation-delay: 0.9s;
 }
 
 .floatStickerStar2 {
   top: 50px;
   left: -22px;
-  color: var(--navy-light);
-  font-size: 20px;
   animation-delay: 1.5s;
 }
 
 .floatStickerHeart {
   bottom: -18px;
   left: 20px;
-  font-size: 32px;
   animation-delay: 0.5s;
 }
 
@@ -511,7 +525,7 @@
 .journeySection {
   position: relative;
   z-index: 10;
-  padding: 70px 0 90px;
+  padding: 76px 0 96px;
   background: var(--cream-soft);
   border-top: 2px solid var(--blue-light);
   border-bottom: 2px solid var(--blue-light);
@@ -521,6 +535,7 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 32px;
+  position: relative;
 }
 
 .journeyCard {
@@ -541,28 +556,30 @@
   box-shadow: var(--shadow-medium);
 }
 
+.journeyHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 22px;
+}
+
 .journeyStepNumber {
-  position: absolute;
-  top: 20px;
-  right: 24px;
   font-size: 32px;
-  font-weight: 700;
-  color: var(--blue-pastel);
-  opacity: 0.7;
+  font-weight: 800;
+  color: var(--navy-light);
   font-family: 'Shantell Sans', cursive;
+  line-height: 1;
 }
 
 .journeyIconBox {
-  width: 58px;
-  height: 58px;
+  width: 52px;
+  height: 52px;
   border-radius: var(--radius-sm);
   background: var(--blue-light);
   border: 1.5px solid var(--blue-pastel);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 30px;
-  margin-bottom: 22px;
 }
 
 .journeyCardTitle {
@@ -570,6 +587,7 @@
   font-weight: 700;
   color: var(--navy);
   margin-bottom: 12px;
+  line-height: 1.3;
 }
 
 .journeyCardDesc {
@@ -626,7 +644,8 @@
 }
 
 .mysteryBadge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   background: var(--yellow-warm);
   color: var(--navy);
   border: 1.5px solid var(--yellow-gold);
@@ -662,15 +681,22 @@
 .mysteryPoint {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 14px;
   background: var(--cream-soft);
   padding: 14px 18px;
   border-radius: var(--radius-md);
   border: 1.5px solid var(--blue-light);
 }
 
-.mysteryPoint span {
-  font-size: 24px;
+.mysteryPointIconBox {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  background: var(--white);
+  border: 1.5px solid var(--blue-pastel);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
 
@@ -690,6 +716,9 @@
 
 .mysteryCta {
   font-size: 16px !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 /* ── Section C: Brand Story ── */
@@ -745,8 +774,15 @@
   box-shadow: var(--shadow-subtle);
 }
 
-.valueIcon {
-  font-size: 26px;
+.valueIconBox {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  background: var(--cream-soft);
+  border: 1.5px solid var(--blue-pastel);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
 
@@ -879,12 +915,15 @@
   color: var(--navy);
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
-.faqQuestionIcon {
-  color: var(--yellow-gold);
-  font-size: 12px;
+.faqQuestionDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--blue-pastel);
+  border: 1.5px solid var(--navy);
   flex-shrink: 0;
 }
 
@@ -897,7 +936,7 @@
 }
 
 .faqAnswer {
-  padding: 0 24px 22px 46px;
+  padding: 0 24px 22px 44px;
   font-size: 15px;
   line-height: 1.7;
   color: var(--text-muted);
@@ -981,6 +1020,14 @@
   color: var(--text-muted);
 }
 
+.contactIconLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--navy);
+  font-weight: 600;
+}
+
 .footerContactList a {
   color: var(--navy);
   font-weight: 700;
@@ -1006,6 +1053,9 @@
 }
 
 .footerActionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   align-self: flex-start;
   margin-top: 6px;
 }
@@ -1119,10 +1169,6 @@
 
   .teaserPiece {
     min-height: 100px;
-  }
-
-  .pieceIcon {
-    font-size: 22px;
   }
 
   .pieceName {
