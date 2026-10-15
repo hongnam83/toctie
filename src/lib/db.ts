@@ -1,10 +1,17 @@
 // Unified Database Layer for Tóc.Tie Loyalty
-// Connects to Supabase with seamless in-memory fallback
+// Connects to Supabase with seamless disk-persisted fallback
 
 import { supabaseAdmin } from "./supabase";
-import { getStore, generateId, simpleHash, User, RedemptionCode } from "./store";
+import {
+  getStore,
+  persistStore,
+  generateId,
+  simpleHash,
+  User,
+  RedemptionCode,
+} from "./store";
 
-export { simpleHash, generateId };
+export { simpleHash, generateId, persistStore };
 export type { User, RedemptionCode };
 
 let isSupabaseAvailable: boolean | null = null;
@@ -25,7 +32,7 @@ export async function testSupabaseConnection(): Promise<{
 
     if (error) {
       return {
-        connected: true, // Key works, but table not found yet
+        connected: true, // Key works, but table not created yet
         tablesReady: false,
         error: error.message,
       };
@@ -45,7 +52,7 @@ export async function testSupabaseConnection(): Promise<{
  */
 export async function findUserByName(fullName: string): Promise<User | null> {
   const normalized = fullName.trim();
-  
+
   try {
     const { data, error } = await supabaseAdmin
       .from("users")
@@ -54,7 +61,7 @@ export async function findUserByName(fullName: string): Promise<User | null> {
       .maybeSingle();
 
     if (!error && data) {
-      return {
+      const u: User = {
         id: data.id,
         fullName: data.full_name,
         passwordHash: data.password_hash,
@@ -62,12 +69,18 @@ export async function findUserByName(fullName: string): Promise<User | null> {
         unlockedPieces: data.unlocked_pieces || [],
         redeemedCodes: data.redeemed_codes || [],
       };
+      // Keep local store in sync
+      const store = getStore();
+      store.users.set(u.id, u);
+      store.usersByName.set(u.fullName.toLowerCase(), u.id);
+      persistStore();
+      return u;
     }
   } catch {
-    // Supabase unavailable, fall through to memory store
+    // Supabase unavailable, fall through
   }
 
-  // In-memory fallback
+  // Local persistent fallback
   const store = getStore();
   const userId = store.usersByName.get(normalized.toLowerCase());
   if (userId) {
@@ -89,7 +102,7 @@ export async function findUserById(id: string): Promise<User | null> {
       .maybeSingle();
 
     if (!error && data) {
-      return {
+      const u: User = {
         id: data.id,
         fullName: data.full_name,
         passwordHash: data.password_hash,
@@ -97,6 +110,11 @@ export async function findUserById(id: string): Promise<User | null> {
         unlockedPieces: data.unlocked_pieces || [],
         redeemedCodes: data.redeemed_codes || [],
       };
+      const store = getStore();
+      store.users.set(u.id, u);
+      store.usersByName.set(u.fullName.toLowerCase(), u.id);
+      persistStore();
+      return u;
     }
   } catch {
     // Fall through
@@ -107,11 +125,11 @@ export async function findUserById(id: string): Promise<User | null> {
 }
 
 /**
- * Create a new user
+ * Create a new user (guaranteed to appear in backend immediately)
  */
 export async function createUser(
   fullName: string,
-  passwordHash: string
+  passwordHash: string = "passwordless"
 ): Promise<User> {
   const name = fullName.trim();
   const id = generateId();
@@ -125,8 +143,15 @@ export async function createUser(
     redeemedCodes: [],
   };
 
+  // 1. Always save to local persistent store immediately
+  const store = getStore();
+  store.users.set(id, newUser);
+  store.usersByName.set(name.toLowerCase(), id);
+  persistStore();
+
+  // 2. Sync to Supabase if available
   try {
-    const { error } = await supabaseAdmin.from("users").insert({
+    await supabaseAdmin.from("users").insert({
       id,
       full_name: name,
       password_hash: passwordHash,
@@ -134,22 +159,10 @@ export async function createUser(
       redeemed_codes: [],
       created_at: createdAt,
     });
-
-    if (!error) {
-      // Also cache in memory for speed
-      const store = getStore();
-      store.users.set(id, newUser);
-      store.usersByName.set(name.toLowerCase(), id);
-      return newUser;
-    }
-  } catch {
-    // Fall through
+  } catch (err) {
+    console.warn("Supabase insert user failed (using disk backup):", err);
   }
 
-  // In-memory fallback
-  const store = getStore();
-  store.users.set(id, newUser);
-  store.usersByName.set(name.toLowerCase(), id);
   return newUser;
 }
 
@@ -195,30 +208,7 @@ export async function redeemCode(
   const updatedPieces = [...user.unlockedPieces, newPiece];
   const updatedCodes = [...user.redeemedCodes, normalized];
 
-  try {
-    // 1. Update code status in Supabase
-    await supabaseAdmin
-      .from("redemption_codes")
-      .update({
-        is_used: true,
-        used_by: user.fullName,
-        used_at: now,
-      })
-      .eq("code", normalized);
-
-    // 2. Update user puzzle pieces in Supabase
-    await supabaseAdmin
-      .from("users")
-      .update({
-        unlocked_pieces: updatedPieces,
-        redeemed_codes: updatedCodes,
-      })
-      .eq("id", user.id);
-  } catch {
-    // Continue with in-memory sync
-  }
-
-  // Update in-memory store
+  // 1. Update in local persistent store
   const store = getStore();
   const memoryCode = store.codes.get(normalized);
   if (memoryCode) {
@@ -231,6 +221,30 @@ export async function redeemCode(
     memoryUser.unlockedPieces = updatedPieces;
     memoryUser.redeemedCodes = updatedCodes;
   }
+  persistStore();
+
+  // 2. Sync to Supabase
+  try {
+    await Promise.all([
+      supabaseAdmin
+        .from("redemption_codes")
+        .update({
+          is_used: true,
+          used_by: user.fullName,
+          used_at: now,
+        })
+        .eq("code", normalized),
+      supabaseAdmin
+        .from("users")
+        .update({
+          unlocked_pieces: updatedPieces,
+          redeemed_codes: updatedCodes,
+        })
+        .eq("id", user.id),
+    ]);
+  } catch {
+    // Handled by disk persistence
+  }
 
   return { success: true, unlockedPieces: updatedPieces };
 }
@@ -242,6 +256,8 @@ export async function getAdminData(): Promise<{
   users: Array<User & { pieceCount: number; isComplete: boolean }>;
   codes: RedemptionCode[];
 }> {
+  const store = getStore();
+
   try {
     const [usersRes, codesRes] = await Promise.all([
       supabaseAdmin.from("users").select("*").order("created_at", { ascending: false }),
@@ -249,34 +265,35 @@ export async function getAdminData(): Promise<{
     ]);
 
     if (!usersRes.error && !codesRes.error && usersRes.data && codesRes.data) {
-      const users = usersRes.data.map((u) => {
+      usersRes.data.forEach((u) => {
         const pieces = u.unlocked_pieces || [];
-        return {
+        const userObj: User = {
           id: u.id,
           fullName: u.full_name,
           passwordHash: u.password_hash,
           createdAt: u.created_at,
           unlockedPieces: pieces,
-          pieceCount: pieces.length,
-          isComplete: pieces.length === 4,
           redeemedCodes: u.redeemed_codes || [],
         };
+        store.users.set(u.id, userObj);
+        store.usersByName.set(u.full_name.toLowerCase(), u.id);
       });
 
-      const codes: RedemptionCode[] = codesRes.data.map((c) => ({
-        code: c.code,
-        isUsed: c.is_used,
-        usedBy: c.used_by,
-        usedAt: c.used_at,
-      }));
+      codesRes.data.forEach((c) => {
+        store.codes.set(c.code.toUpperCase(), {
+          code: c.code.toUpperCase(),
+          isUsed: c.is_used,
+          usedBy: c.used_by,
+          usedAt: c.used_at,
+        });
+      });
 
-      return { users, codes };
+      persistStore();
     }
   } catch {
-    // Fallback to in-memory
+    // Fallback to local store
   }
 
-  const store = getStore();
   const users = Array.from(store.users.values()).map((u) => ({
     ...u,
     pieceCount: u.unlockedPieces.length,
@@ -296,14 +313,12 @@ export async function addBatchCodes(
   const store = getStore();
   const added: string[] = [];
   const skipped: string[] = [];
-
   const toInsert: Array<{ code: string; is_used: boolean }> = [];
 
   for (const raw of codes) {
     const code = raw.trim().toUpperCase();
     if (!code) continue;
 
-    // Check memory first
     if (store.codes.has(code)) {
       skipped.push(code);
     } else {
@@ -313,15 +328,109 @@ export async function addBatchCodes(
     }
   }
 
+  persistStore();
+
   if (toInsert.length > 0) {
     try {
-      await supabaseAdmin.from("redemption_codes").upsert(toInsert, { onConflict: "code", ignoreDuplicates: true });
+      await supabaseAdmin
+        .from("redemption_codes")
+        .upsert(toInsert, { onConflict: "code", ignoreDuplicates: true });
     } catch {
-      // Handled in memory
+      // Handled by disk persistence
     }
   }
 
   return { added, skipped };
+}
+
+/**
+ * Delete a single redemption code (Admin)
+ */
+export async function deleteRedemptionCode(
+  code: string
+): Promise<{ success: boolean; code: string }> {
+  const normalized = code.trim().toUpperCase();
+
+  // 1. Delete from local persistent store
+  const store = getStore();
+  const existed = store.codes.delete(normalized);
+  persistStore();
+
+  // 2. Delete from Supabase
+  try {
+    await supabaseAdmin
+      .from("redemption_codes")
+      .delete()
+      .eq("code", normalized);
+  } catch (err) {
+    console.warn("Lỗi khi xóa mã trên Supabase:", err);
+  }
+
+  return { success: existed, code: normalized };
+}
+
+/**
+ * Delete multiple redemption codes in batch (Admin)
+ */
+export async function deleteBatchRedemptionCodes(
+  codes: string[]
+): Promise<{ success: boolean; deletedCount: number }> {
+  const normalizedList = codes.map((c) => c.trim().toUpperCase()).filter(Boolean);
+  if (normalizedList.length === 0) {
+    return { success: true, deletedCount: 0 };
+  }
+
+  const store = getStore();
+  let count = 0;
+  for (const c of normalizedList) {
+    if (store.codes.delete(c)) {
+      count++;
+    }
+  }
+  persistStore();
+
+  try {
+    await supabaseAdmin
+      .from("redemption_codes")
+      .delete()
+      .in("code", normalizedList);
+  } catch (err) {
+    console.warn("Lỗi khi xóa danh sách mã trên Supabase:", err);
+  }
+
+  return { success: true, deletedCount: count };
+}
+
+/**
+ * Delete all unused redemption codes (Admin)
+ */
+export async function deleteUnusedRedemptionCodes(): Promise<{
+  success: boolean;
+  deletedCount: number;
+}> {
+  const store = getStore();
+  let count = 0;
+  const deletedCodes: string[] = [];
+
+  for (const [key, val] of Array.from(store.codes.entries())) {
+    if (!val.isUsed) {
+      store.codes.delete(key);
+      deletedCodes.push(key);
+      count++;
+    }
+  }
+  persistStore();
+
+  try {
+    await supabaseAdmin
+      .from("redemption_codes")
+      .delete()
+      .eq("is_used", false);
+  } catch (err) {
+    console.warn("Lỗi khi xóa các mã chưa dùng trên Supabase:", err);
+  }
+
+  return { success: true, deletedCount: count };
 }
 
 /**
@@ -342,7 +451,6 @@ export async function resetUserPassword(
 
   const targetId = identifier.trim();
 
-  // Look up user by ID first, then by name
   let user = await findUserById(targetId);
   if (!user) {
     user = await findUserByName(targetId);
@@ -352,7 +460,6 @@ export async function resetUserPassword(
     return { success: false, error: `Không tìm thấy tài khoản với thông tin: "${targetId}".` };
   }
 
-  // Generate a friendly 8-10 character temporary password if not specified
   const finalPassword =
     newPassword && newPassword.trim().length >= 4
       ? newPassword.trim()
@@ -360,24 +467,20 @@ export async function resetUserPassword(
 
   const newHash = simpleHash(finalPassword);
 
-  try {
-    const { error } = await supabaseAdmin
-      .from("users")
-      .update({ password_hash: newHash })
-      .eq("id", user.id);
-
-    if (error) {
-      console.warn("Lưu mật khẩu mới vào Supabase gặp lỗi, chuyển sang fallback:", error.message);
-    }
-  } catch (err) {
-    console.warn("Lỗi kết nối Supabase khi đổi mật khẩu:", err);
-  }
-
-  // Always update in-memory store
   const store = getStore();
   const memUser = store.users.get(user.id);
   if (memUser) {
     memUser.passwordHash = newHash;
+  }
+  persistStore();
+
+  try {
+    await supabaseAdmin
+      .from("users")
+      .update({ password_hash: newHash })
+      .eq("id", user.id);
+  } catch (err) {
+    console.warn("Lỗi kết nối Supabase khi đổi mật khẩu:", err);
   }
 
   return {
@@ -402,23 +505,9 @@ export async function renameUserAccount(
     return { success: false, error: "Tên tài khoản mới phải có ít nhất 2 ký tự." };
   }
 
-  // Check if name is taken
   const existing = await findUserByName(trimmed);
   if (existing && existing.id !== userId) {
     return { success: false, error: `Tên tài khoản "${trimmed}" đã có người sử dụng.` };
-  }
-
-  try {
-    const { error } = await supabaseAdmin
-      .from("users")
-      .update({ full_name: trimmed })
-      .eq("id", userId);
-
-    if (error) {
-      console.warn("Lỗi khi cập nhật tên trên Supabase:", error.message);
-    }
-  } catch (err) {
-    console.warn("Lỗi kết nối Supabase khi đổi tên tài khoản:", err);
   }
 
   const store = getStore();
@@ -427,9 +516,17 @@ export async function renameUserAccount(
     store.usersByName.delete(user.fullName.toLowerCase());
     user.fullName = trimmed;
     store.usersByName.set(trimmed.toLowerCase(), userId);
+    persistStore();
+  }
+
+  try {
+    await supabaseAdmin
+      .from("users")
+      .update({ full_name: trimmed })
+      .eq("id", userId);
+  } catch (err) {
+    console.warn("Lỗi kết nối Supabase khi đổi tên tài khoản:", err);
   }
 
   return { success: true, newName: trimmed };
 }
-
-

@@ -21,14 +21,19 @@
    - **Không cần mật khẩu**: Mỗi lần quay lại, khách hàng chỉ cần nhập đúng tên tài khoản của mình để tiếp tục gom đủ 4 mảnh ghép (hoàn toàn không lo quên mật khẩu hay nhập sai).
    - Hệ thống tự động lưu trữ tiến độ mở mảnh ghép theo tài khoản này.
 
-4. **Trang Quản Trị Viên (Admin Dashboard) & Hỗ Trợ Khách Hàng**:
+4. **Trang Quản Trị Viên (Admin Dashboard) & Quản Lý Mã Dự Thưởng**:
    - Truy cập tại: `/admin` (Mã bảo mật: `toctie1234`).
-   - Quản lý danh sách tài khoản người chơi và tiến độ mở 4 mảnh.
+   - **Tài khoản khách hàng xuất hiện tức thì**: Mỗi khi khách hàng mới đăng ký, tài khoản sẽ hiển thị ngay lập tức lên bảng quản trị (tự động đồng bộ mỗi 5 giây) và được lưu trữ bền vững trên đĩa (`data/store.json`) lẫn Supabase.
    - **Hỗ trợ khách hàng**:
      - Tìm kiếm nhanh theo tên tài khoản.
      - Nút **👤 Quản lý**: Xem chi tiết, sao chép nhanh tên tài khoản hoặc sao chép tin nhắn gửi khách hàng qua Fanpage/Zalo.
      - Hỗ trợ đổi tên tài khoản nếu khách hàng nhập nhầm.
-   - Quản lý mã dự thưởng: Xem mã đã dùng / chưa dùng, tạo thêm mã mới theo lô.
+   - **Quản lý & Xóa Mã Dự Thưởng**:
+     - Thêm mã mới theo lô (hỗ trợ phân cách bằng dấu phẩy, xuống dòng).
+     - **Xóa mã đơn lẻ**: Nút `🗑️ Xóa` trực tiếp trên từng dòng mã.
+     - **Xóa hàng loạt**: Chọn nhiều mã bằng ô checkbox và bấm `🗑️ Xóa X mã đã chọn`.
+     - **Dọn dẹp nhanh**: Nút `🧹 Xóa tất cả mã chưa dùng` với 1 cú nhấp chuột.
+     - Tìm kiếm mã theo chuỗi ký tự hoặc theo tên người đã sử dụng.
 
 ---
 

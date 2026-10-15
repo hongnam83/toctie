@@ -1,4 +1,4 @@
-// Admin API — GET stats, users, codes & POST actions (add-codes, reset-password, rename-account)
+// Admin API — GET stats, users, codes & POST/DELETE actions
 // Secret: query param ?secret=toctie1234 or header Authorization
 
 import { NextRequest, NextResponse } from "next/server";
@@ -8,6 +8,9 @@ import {
   testSupabaseConnection,
   resetUserPassword,
   renameUserAccount,
+  deleteRedemptionCode,
+  deleteBatchRedemptionCodes,
+  deleteUnusedRedemptionCodes,
 } from "@/lib/db";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET || "toctie1234";
@@ -56,6 +59,44 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
+    // ACTION: Delete single code
+    if (body.action === "delete-code") {
+      const code = body.code;
+      if (!code) {
+        return NextResponse.json({ error: "Thiếu mã code cần xóa." }, { status: 400 });
+      }
+      const result = await deleteRedemptionCode(code);
+      return NextResponse.json({
+        success: true,
+        message: `Đã xóa mã "${result.code}" thành công.`,
+        code: result.code,
+      });
+    }
+
+    // ACTION: Delete batch codes
+    if (body.action === "delete-batch-codes") {
+      const codes = body.codes;
+      if (!Array.isArray(codes) || codes.length === 0) {
+        return NextResponse.json({ error: "Danh sách mã cần xóa không hợp lệ." }, { status: 400 });
+      }
+      const result = await deleteBatchRedemptionCodes(codes);
+      return NextResponse.json({
+        success: true,
+        message: `Đã xóa thành công ${result.deletedCount} mã dự thưởng.`,
+        deletedCount: result.deletedCount,
+      });
+    }
+
+    // ACTION: Delete all unused codes
+    if (body.action === "delete-unused-codes") {
+      const result = await deleteUnusedRedemptionCodes();
+      return NextResponse.json({
+        success: true,
+        message: `Đã dọn dẹp và xóa ${result.deletedCount} mã chưa sử dụng.`,
+        deletedCount: result.deletedCount,
+      });
+    }
+
     // ACTION: Rename user account
     if (body.action === "rename-account") {
       const { userId, newAccountName } = body;
@@ -76,7 +117,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // ACTION: Reset user password (for legacy or admin password set)
+    // ACTION: Reset user password
     if (body.action === "reset-password") {
       const identifier = body.userId || body.identifier || body.fullName;
       if (!identifier) {
@@ -120,4 +161,25 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// DELETE — delete code via REST
+export async function DELETE(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const secret = searchParams.get("secret");
+  const code = searchParams.get("code");
+
+  if (secret !== ADMIN_SECRET) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!code) {
+    return NextResponse.json({ error: "Thiếu tham số code." }, { status: 400 });
+  }
+
+  const result = await deleteRedemptionCode(code);
+  return NextResponse.json({
+    success: true,
+    message: `Đã xóa mã "${result.code}" thành công.`,
+  });
 }

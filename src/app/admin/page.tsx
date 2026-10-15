@@ -57,6 +57,12 @@ export default function AdminPage() {
   const [actionSuccess, setActionSuccess] = useState("");
   const [copyNotice, setCopyNotice] = useState("");
 
+  // Code search & deletion states
+  const [codeSearch, setCodeSearch] = useState("");
+  const [selectedCodes, setSelectedCodes] = useState<string[]>([]);
+  const [deleteMsg, setDeleteMsg] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
   const fetchData = useCallback(async (s: string) => {
     setLoading(true);
     setError("");
@@ -108,6 +114,126 @@ export default function AdminPage() {
       fetchData(secret);
     } catch {
       setAddMsg("Lỗi khi thêm mã.");
+    }
+  };
+
+  // ── XÓA MÃ CODE ──
+  const handleDeleteSingleCode = async (code: string) => {
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa mã "${code}" khỏi hệ thống không?`)) {
+      return;
+    }
+
+    setDeleteLoading(true);
+    setDeleteMsg("");
+    try {
+      const res = await fetch(`/api/admin?secret=${secret}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "delete-code", code }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setDeleteMsg(data.message || `Đã xóa mã ${code}.`);
+        setSelectedCodes((prev) => prev.filter((c) => c !== code));
+        setTimeout(() => setDeleteMsg(""), 4000);
+        fetchData(secret);
+      } else {
+        setDeleteMsg(data.error || "Lỗi khi xóa mã.");
+      }
+    } catch {
+      setDeleteMsg("Không thể kết nối để xóa mã.");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const handleDeleteSelectedCodes = async () => {
+    if (selectedCodes.length === 0) return;
+    if (
+      !window.confirm(
+        `Bạn có chắc chắn muốn xóa ${selectedCodes.length} mã đã chọn không?`
+      )
+    ) {
+      return;
+    }
+
+    setDeleteLoading(true);
+    setDeleteMsg("");
+    try {
+      const res = await fetch(`/api/admin?secret=${secret}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "delete-batch-codes", codes: selectedCodes }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setDeleteMsg(data.message || `Đã xóa ${selectedCodes.length} mã.`);
+        setSelectedCodes([]);
+        setTimeout(() => setDeleteMsg(""), 4000);
+        fetchData(secret);
+      } else {
+        setDeleteMsg(data.error || "Lỗi khi xóa mã hàng loạt.");
+      }
+    } catch {
+      setDeleteMsg("Lỗi kết nối khi xóa mã hàng loạt.");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const handleDeleteAllUnusedCodes = async () => {
+    const unusedCount = codes.filter((c) => !c.isUsed).length;
+    if (unusedCount === 0) {
+      alert("Không có mã chưa sử dụng nào để xóa.");
+      return;
+    }
+
+    if (
+      !window.confirm(
+        `CẢNH BÁO: Bạn có muốn xóa toàn bộ ${unusedCount} mã CHƯA DÙNG khỏi hệ thống?`
+      )
+    ) {
+      return;
+    }
+
+    setDeleteLoading(true);
+    setDeleteMsg("");
+    try {
+      const res = await fetch(`/api/admin?secret=${secret}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "delete-unused-codes" }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setDeleteMsg(data.message || "Đã xóa toàn bộ mã chưa dùng.");
+        setSelectedCodes([]);
+        setTimeout(() => setDeleteMsg(""), 4000);
+        fetchData(secret);
+      } else {
+        setDeleteMsg(data.error || "Lỗi khi xóa mã chưa dùng.");
+      }
+    } catch {
+      setDeleteMsg("Lỗi kết nối khi xóa mã chưa dùng.");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const handleToggleCode = (code: string) => {
+    setSelectedCodes((prev) =>
+      prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]
+    );
+  };
+
+  const handleToggleSelectAll = () => {
+    const visibleCodes = filteredCodes.map((c) => c.code);
+    const allSelected = visibleCodes.every((c) => selectedCodes.includes(c));
+    if (allSelected) {
+      setSelectedCodes((prev) => prev.filter((c) => !visibleCodes.includes(c)));
+    } else {
+      const combined = Array.from(new Set([...selectedCodes, ...visibleCodes]));
+      setSelectedCodes(combined);
     }
   };
 
@@ -171,22 +297,33 @@ export default function AdminPage() {
     setTimeout(() => setCopyNotice(""), 3000);
   };
 
-  // Auto-refresh every 30s
+  // Real-time auto-refresh every 5s so newly registered accounts appear immediately!
   useEffect(() => {
     if (!authed) return;
-    const interval = setInterval(() => fetchData(secret), 30000);
+    const interval = setInterval(() => fetchData(secret), 5000);
     return () => clearInterval(interval);
   }, [authed, secret, fetchData]);
 
   const filteredCodes = codes.filter((c) => {
-    if (filter === "used") return c.isUsed;
-    if (filter === "unused") return !c.isUsed;
+    if (filter === "used" && !c.isUsed) return false;
+    if (filter === "unused" && c.isUsed) return false;
+    if (codeSearch.trim()) {
+      const search = codeSearch.trim().toUpperCase();
+      return (
+        c.code.includes(search) ||
+        (c.usedBy && c.usedBy.toUpperCase().includes(search))
+      );
+    }
     return true;
   });
 
   const filteredUsers = users.filter((u) =>
     u.fullName.toLowerCase().includes(userSearch.toLowerCase().trim())
   );
+
+  const areAllVisibleSelected =
+    filteredCodes.length > 0 &&
+    filteredCodes.every((c) => selectedCodes.includes(c.code));
 
   if (!authed) {
     return (
@@ -201,12 +338,22 @@ export default function AdminPage() {
               className="input-field"
               placeholder="Mật khẩu admin..."
               value={secret}
-              onChange={(e) => { setSecret(e.target.value); setError(""); }}
+              onChange={(e) => {
+                setSecret(e.target.value);
+                setError("");
+              }}
               autoFocus
             />
             {error && <div className="message message-error">{error}</div>}
             <button type="submit" className="btn btn-primary w-full" disabled={loading}>
-              {loading ? <><span className="spinner" />Đang kiểm tra...</> : "Đăng nhập Admin"}
+              {loading ? (
+                <>
+                  <span className="spinner" />
+                  Đang kiểm tra...
+                </>
+              ) : (
+                "Đăng nhập Admin"
+              )}
             </button>
           </form>
         </div>
@@ -222,12 +369,14 @@ export default function AdminPage() {
           <span className={styles.headerEmoji}>🔑</span>
           <div>
             <h1 className={styles.headerTitle}>Admin Dashboard</h1>
-            <p className={styles.headerSub}>tóc.tie Loyalty System</p>
+            <p className={styles.headerSub}>
+              tóc.tie Loyalty System · Tự động đồng bộ mỗi 5s
+            </p>
           </div>
         </div>
         <div className={styles.headerRight}>
           <button className="btn btn-secondary btn-sm" onClick={handleRefresh} disabled={loading}>
-            {loading ? <span className="spinner" style={{ width: 14, height: 14 }} /> : "🔄"} Refresh
+            {loading ? <span className="spinner" style={{ width: 14, height: 14 }} /> : "🔄"} Làm mới
           </button>
           <button className="btn btn-secondary btn-sm" onClick={() => setAuthed(false)}>
             Đăng xuất
@@ -246,16 +395,28 @@ export default function AdminPage() {
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              background: stats.db.tablesReady ? "rgba(46, 125, 50, 0.1)" : "rgba(230, 81, 0, 0.1)",
-              border: stats.db.tablesReady ? "1px solid rgba(46, 125, 50, 0.3)" : "1px solid rgba(230, 81, 0, 0.3)",
+              background: stats.db.tablesReady
+                ? "rgba(46, 125, 50, 0.1)"
+                : "rgba(230, 81, 0, 0.1)",
+              border: stats.db.tablesReady
+                ? "1px solid rgba(46, 125, 50, 0.3)"
+                : "1px solid rgba(230, 81, 0, 0.3)",
               fontSize: "0.9rem",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <span style={{ fontSize: "1.2rem" }}>{stats.db.tablesReady ? "🟢" : "⚡"}</span>
+              <span style={{ fontSize: "1.2rem" }}>
+                {stats.db.tablesReady ? "🟢" : "⚡"}
+              </span>
               <div>
                 <strong>Cơ sở dữ liệu: {stats.db.type}</strong>
-                <div style={{ color: "var(--color-navy-light)", fontSize: "0.82rem", marginTop: "2px" }}>
+                <div
+                  style={{
+                    color: "var(--color-navy-light)",
+                    fontSize: "0.82rem",
+                    marginTop: "2px",
+                  }}
+                >
                   {stats.db.notice}
                 </div>
               </div>
@@ -270,7 +431,7 @@ export default function AdminPage() {
                 color: "#fff",
               }}
             >
-              {stats.db.tablesReady ? "ĐANG HOẠT ĐỘNG" : "ĐÃ KẾT NỐI (CHỜ BẢNG)"}
+              {stats.db.tablesReady ? "ĐANG HOẠT ĐỘNG" : "ĐÃ KẾT NỐI (LƯU ĐĨA AN TOÀN)"}
             </span>
           </div>
         )}
@@ -279,11 +440,36 @@ export default function AdminPage() {
         {stats && (
           <div className={styles.statsGrid}>
             {[
-              { label: "Tổng người dùng", value: stats.totalUsers, icon: "👥", color: styles.statBlue },
-              { label: "Hoàn thành 4 mảnh", value: stats.completedUsers, icon: "🏆", color: styles.statGold },
-              { label: "Tổng mã", value: stats.totalCodes, icon: "🎟️", color: styles.statGray },
-              { label: "Đã dùng", value: stats.usedCodes, icon: "✅", color: styles.statGreen },
-              { label: "Còn lại", value: stats.unusedCodes, icon: "🔒", color: styles.statPink },
+              {
+                label: "Tổng tài khoản khách",
+                value: stats.totalUsers,
+                icon: "👥",
+                color: styles.statBlue,
+              },
+              {
+                label: "Hoàn thành 4 mảnh",
+                value: stats.completedUsers,
+                icon: "🏆",
+                color: styles.statGold,
+              },
+              {
+                label: "Tổng mã dự thưởng",
+                value: stats.totalCodes,
+                icon: "🎟️",
+                color: styles.statGray,
+              },
+              {
+                label: "Mã đã dùng",
+                value: stats.usedCodes,
+                icon: "✅",
+                color: styles.statGreen,
+              },
+              {
+                label: "Mã còn lại",
+                value: stats.unusedCodes,
+                icon: "🔒",
+                color: styles.statPink,
+              },
             ].map((s, i) => (
               <div key={i} className={`${styles.statCard} ${s.color}`}>
                 <span className={styles.statIcon}>{s.icon}</span>
@@ -317,7 +503,7 @@ export default function AdminPage() {
               <div>
                 <h2>Danh sách tài khoản khách hàng</h2>
                 <span className={styles.tableCount}>
-                  {filteredUsers.length} / {users.length} tài khoản
+                  {filteredUsers.length} / {users.length} tài khoản (Cập nhật thời gian thực)
                 </span>
               </div>
               <div className={styles.tableControls}>
@@ -333,7 +519,9 @@ export default function AdminPage() {
 
             {filteredUsers.length === 0 ? (
               <div className={styles.empty}>
-                {userSearch ? "Không tìm thấy tài khoản nào phù hợp." : "Chưa có tài khoản nào được tạo."}
+                {userSearch
+                  ? "Không tìm thấy tài khoản nào phù hợp."
+                  : "Chưa có tài khoản nào được tạo. Khi khách đăng ký sẽ xuất hiện ngay tại đây!"}
               </div>
             ) : (
               <div className={styles.tableWrapper}>
@@ -350,17 +538,25 @@ export default function AdminPage() {
                   </thead>
                   <tbody>
                     {filteredUsers
-                      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                      .sort(
+                        (a, b) =>
+                          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                      )
                       .map((u) => (
                         <tr key={u.id} className={u.isComplete ? styles.rowComplete : ""}>
                           <td className={styles.tdName}>
-                            <span className={styles.avatar}>{u.fullName.charAt(0).toUpperCase()}</span>
+                            <span className={styles.avatar}>
+                              {u.fullName.charAt(0).toUpperCase()}
+                            </span>
                             <strong>{u.fullName}</strong>
                           </td>
                           <td className={styles.tdDate}>
                             {new Date(u.createdAt).toLocaleDateString("vi-VN", {
-                              day: "2-digit", month: "2-digit", year: "numeric",
-                              hour: "2-digit", minute: "2-digit",
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
                             })}
                           </td>
                           <td>
@@ -368,7 +564,9 @@ export default function AdminPage() {
                               {[0, 1, 2, 3].map((i) => (
                                 <span
                                   key={i}
-                                  className={`${styles.pieceDot} ${u.redeemedCodes.length > i ? styles.pieceDotFilled : ""}`}
+                                  className={`${styles.pieceDot} ${
+                                    u.redeemedCodes.length > i ? styles.pieceDotFilled : ""
+                                  }`}
                                   title={`Mảnh ${i + 1}`}
                                 />
                               ))}
@@ -378,17 +576,23 @@ export default function AdminPage() {
                             {u.isComplete ? (
                               <span className={styles.badgeComplete}>🏆 Hoàn thành</span>
                             ) : (
-                              <span className={styles.badgeInProgress}>{u.pieceCount}/4 mảnh</span>
+                              <span className={styles.badgeInProgress}>
+                                {u.pieceCount}/4 mảnh
+                              </span>
                             )}
                           </td>
                           <td>
                             <div className={styles.codeList}>
                               {u.redeemedCodes.length > 0 ? (
                                 u.redeemedCodes.map((c) => (
-                                  <code key={c} className={styles.codeTag}>{c}</code>
+                                  <code key={c} className={styles.codeTag}>
+                                    {c}
+                                  </code>
                                 ))
                               ) : (
-                                <span style={{ color: "var(--text-muted)", fontSize: "12px" }}>Chưa nhập mã</span>
+                                <span style={{ color: "var(--text-muted)", fontSize: "12px" }}>
+                                  Chưa nhập mã
+                                </span>
                               )}
                             </div>
                           </td>
@@ -428,7 +632,11 @@ export default function AdminPage() {
                   rows={6}
                 />
                 {addMsg && (
-                  <div className={`message ${addMsg.includes("Lỗi") ? "message-error" : "message-success"}`}>
+                  <div
+                    className={`message ${
+                      addMsg.includes("Lỗi") ? "message-error" : "message-success"
+                    }`}
+                  >
                     {addMsg}
                   </div>
                 )}
@@ -436,58 +644,188 @@ export default function AdminPage() {
                   Thêm vào hệ thống
                 </button>
               </form>
+
+              <hr
+                style={{
+                  border: "none",
+                  borderTop: "1px dashed var(--blue-pastel)",
+                  margin: "20px 0 16px",
+                }}
+              />
+
+              {/* Quick maintenance actions */}
+              <div>
+                <h3
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    color: "var(--navy)",
+                    marginBottom: "8px",
+                  }}
+                >
+                  🧹 Dọn dẹp mã
+                </h3>
+                <button
+                  type="button"
+                  className={styles.btnDelete}
+                  onClick={handleDeleteAllUnusedCodes}
+                  disabled={deleteLoading}
+                  style={{ width: "100%", justifyContent: "center", padding: "8px" }}
+                >
+                  Xóa tất cả mã chưa dùng ({codes.filter((c) => !c.isUsed).length})
+                </button>
+              </div>
             </div>
 
             {/* Codes list */}
             <div className={styles.tableCard}>
               <div className={styles.tableHeader}>
-                <h2>Danh sách mã dự thưởng</h2>
-                <div className={styles.filterTabs}>
-                  {(["all", "unused", "used"] as const).map((f) => (
-                    <button
-                      key={f}
-                      className={`${styles.filterTab} ${filter === f ? styles.filterTabActive : ""}`}
-                      onClick={() => setFilter(f)}
-                    >
-                      {f === "all" ? `Tất cả (${codes.length})` : f === "unused" ? `Chưa dùng (${codes.filter(c => !c.isUsed).length})` : `Đã dùng (${codes.filter(c => c.isUsed).length})`}
-                    </button>
-                  ))}
+                <div>
+                  <h2>Danh sách mã dự thưởng</h2>
+                  <span className={styles.tableCount}>
+                    {filteredCodes.length} / {codes.length} mã
+                  </span>
+                </div>
+                <div className={styles.tableControls}>
+                  <input
+                    type="text"
+                    className={styles.searchInput}
+                    placeholder="🔍 Tìm mã code hoặc người dùng..."
+                    value={codeSearch}
+                    onChange={(e) => setCodeSearch(e.target.value)}
+                  />
+                  <div className={styles.filterTabs}>
+                    {(["all", "unused", "used"] as const).map((f) => (
+                      <button
+                        key={f}
+                        className={`${styles.filterTab} ${
+                          filter === f ? styles.filterTabActive : ""
+                        }`}
+                        onClick={() => setFilter(f)}
+                      >
+                        {f === "all"
+                          ? `Tất cả (${codes.length})`
+                          : f === "unused"
+                          ? `Chưa dùng (${codes.filter((c) => !c.isUsed).length})`
+                          : `Đã dùng (${codes.filter((c) => c.isUsed).length})`}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
+
+              {/* Batch Action Toolbar when items are selected */}
+              {selectedCodes.length > 0 && (
+                <div className={styles.batchToolbar}>
+                  <span>
+                    Đã chọn <strong>{selectedCodes.length}</strong> mã dự thưởng
+                  </span>
+                  <div className={styles.batchToolbarActions}>
+                    <button
+                      type="button"
+                      className={styles.btnDanger}
+                      onClick={handleDeleteSelectedCodes}
+                      disabled={deleteLoading}
+                    >
+                      🗑️ Xóa {selectedCodes.length} mã đã chọn
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => setSelectedCodes([])}
+                    >
+                      Bỏ chọn
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Delete notification */}
+              {deleteMsg && (
+                <div
+                  className={`message ${
+                    deleteMsg.includes("Lỗi") ? "message-error" : "message-success"
+                  }`}
+                  style={{ marginBottom: "16px" }}
+                >
+                  {deleteMsg}
+                </div>
+              )}
+
               <div className={styles.tableWrapper}>
                 <table className={styles.table}>
                   <thead>
                     <tr>
+                      <th className={styles.checkboxCol}>
+                        <input
+                          type="checkbox"
+                          className={styles.checkboxInput}
+                          checked={areAllVisibleSelected}
+                          onChange={handleToggleSelectAll}
+                          title="Chọn tất cả mã đang hiển thị"
+                        />
+                      </th>
                       <th>Mã</th>
                       <th>Trạng thái</th>
                       <th>Tài khoản sử dụng</th>
                       <th>Thời gian dùng</th>
+                      <th>Thao tác</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredCodes.map((c) => (
-                      <tr key={c.code}>
-                        <td>
-                          <code className={styles.codeMonoLg}>{c.code}</code>
-                        </td>
-                        <td>
-                          {c.isUsed ? (
-                            <span className={styles.badgeUsed}>✅ Đã dùng</span>
-                          ) : (
-                            <span className={styles.badgeUnused}>🔒 Chưa dùng</span>
-                          )}
-                        </td>
-                        <td>{c.usedBy || "—"}</td>
-                        <td>
-                          {c.usedAt
-                            ? new Date(c.usedAt).toLocaleDateString("vi-VN", {
-                                day: "2-digit", month: "2-digit", year: "numeric",
-                                hour: "2-digit", minute: "2-digit",
-                              })
-                            : "—"}
+                    {filteredCodes.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} style={{ textAlign: "center", padding: "30px", color: "var(--text-muted)" }}>
+                          Không tìm thấy mã nào phù hợp.
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      filteredCodes.map((c) => (
+                        <tr key={c.code}>
+                          <td className={styles.checkboxCol}>
+                            <input
+                              type="checkbox"
+                              className={styles.checkboxInput}
+                              checked={selectedCodes.includes(c.code)}
+                              onChange={() => handleToggleCode(c.code)}
+                            />
+                          </td>
+                          <td>
+                            <code className={styles.codeMonoLg}>{c.code}</code>
+                          </td>
+                          <td>
+                            {c.isUsed ? (
+                              <span className={styles.badgeUsed}>✅ Đã dùng</span>
+                            ) : (
+                              <span className={styles.badgeUnused}>🔒 Chưa dùng</span>
+                            )}
+                          </td>
+                          <td>{c.usedBy || "—"}</td>
+                          <td>
+                            {c.usedAt
+                              ? new Date(c.usedAt).toLocaleDateString("vi-VN", {
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                  year: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })
+                              : "—"}
+                          </td>
+                          <td>
+                            <button
+                              type="button"
+                              className={styles.btnDelete}
+                              onClick={() => handleDeleteSingleCode(c.code)}
+                              disabled={deleteLoading}
+                              title="Xóa mã này khỏi hệ thống"
+                            >
+                              🗑️ Xóa
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
