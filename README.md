@@ -22,7 +22,7 @@
 
 4. **Trang Quản Trị Viên (Admin Dashboard)**:
    - Truy cập tại: `/admin`
-   - Mã bảo mật mặc định: `toctie-admin-2024`
+   - Mã bảo mật mặc định: `toctie1234`
    - Quản lý danh sách mã code (đã dùng / chưa dùng).
    - Tạo thêm mã code mới theo lô nhanh chóng.
    - Xem danh sách người chơi và tiến độ mở mảnh.

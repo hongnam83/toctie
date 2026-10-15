@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import styles from "./admin.module.css";
 
-const ADMIN_SECRET = "toctie-admin-2024";
+const ADMIN_SECRET = "toctie1234";
 
 interface AdminStats {
   totalUsers: number;

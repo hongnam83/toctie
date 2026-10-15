@@ -1,10 +1,10 @@
 // Admin API — GET stats, users, codes
-// Secret: query param ?secret=toctie-admin-2024
+// Secret: query param ?secret=toctie1234
 
 import { NextRequest, NextResponse } from "next/server";
 import { getStore } from "@/lib/store";
 
-const ADMIN_SECRET = process.env.ADMIN_SECRET || "toctie-admin-2024";
+const ADMIN_SECRET = process.env.ADMIN_SECRET || "toctie1234";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
