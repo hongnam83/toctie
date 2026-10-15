@@ -332,26 +332,6 @@ export default function PuzzleDashboard({
             newlyRevealedPiece={newlyRevealedPiece}
           />
 
-          {/* 4 Corner Labels */}
-          <div className={styles.pieceLabels}>
-            <div className={styles.pieceLabelItem}>
-              <span className={styles.pieceLabelCorner}>Góc 1</span>
-              <span className={styles.pieceLabelName}>🎀 Scrunchie</span>
-            </div>
-            <div className={styles.pieceLabelItem}>
-              <span className={styles.pieceLabelCorner}>Góc 2</span>
-              <span className={styles.pieceLabelName}>🌸 Gương Xinh</span>
-            </div>
-            <div className={styles.pieceLabelItem}>
-              <span className={styles.pieceLabelCorner}>Góc 3</span>
-              <span className={styles.pieceLabelName}>✨ Ánh Sao</span>
-            </div>
-            <div className={styles.pieceLabelItem}>
-              <span className={styles.pieceLabelCorner}>Góc 4</span>
-              <span className={styles.pieceLabelName}>💖 Hộp Quà</span>
-            </div>
-          </div>
-
           {/* Redeemed Codes History */}
           {user.redeemedCodes.length > 0 && (
             <div className={styles.codeHistory}>

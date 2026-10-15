@@ -464,41 +464,6 @@
   margin: 0 auto;
 }
 
-/* 4 Corner Labels under Puzzle */
-.pieceLabels {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  max-width: 520px;
-  margin: 0 auto;
-  width: 100%;
-}
-
-.pieceLabelItem {
-  background: var(--white);
-  border-radius: var(--radius-sm);
-  padding: 8px 10px;
-  border: 1.5px solid var(--blue-light);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 2px;
-}
-
-.pieceLabelCorner {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--text-light);
-  text-transform: uppercase;
-}
-
-.pieceLabelName {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--navy);
-}
-
 /* Redeemed codes history */
 .codeHistory {
   background: var(--white);
@@ -583,9 +548,5 @@
 
   .fbHeaderBtn {
     padding: 8px;
-  }
-
-  .pieceLabels {
-    grid-template-columns: repeat(2, 1fr);
   }
 }
