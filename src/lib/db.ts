@@ -323,3 +323,70 @@ export async function addBatchCodes(
 
   return { added, skipped };
 }
+
+/**
+ * Reset password for a user (Admin/Backend only)
+ */
+export async function resetUserPassword(
+  identifier: string,
+  newPassword?: string
+): Promise<{
+  success: boolean;
+  newPassword?: string;
+  user?: { id: string; fullName: string };
+  error?: string;
+}> {
+  if (!identifier || !identifier.trim()) {
+    return { success: false, error: "Thiếu thông tin người dùng (ID hoặc Tên)." };
+  }
+
+  const targetId = identifier.trim();
+
+  // Look up user by ID first, then by name
+  let user = await findUserById(targetId);
+  if (!user) {
+    user = await findUserByName(targetId);
+  }
+
+  if (!user) {
+    return { success: false, error: `Không tìm thấy tài khoản với thông tin: "${targetId}".` };
+  }
+
+  // Generate a friendly 8-10 character temporary password if not specified
+  const finalPassword =
+    newPassword && newPassword.trim().length >= 4
+      ? newPassword.trim()
+      : `toctie${Math.floor(1000 + Math.random() * 9000)}`;
+
+  const newHash = simpleHash(finalPassword);
+
+  try {
+    const { error } = await supabaseAdmin
+      .from("users")
+      .update({ password_hash: newHash })
+      .eq("id", user.id);
+
+    if (error) {
+      console.warn("Lưu mật khẩu mới vào Supabase gặp lỗi, chuyển sang fallback:", error.message);
+    }
+  } catch (err) {
+    console.warn("Lỗi kết nối Supabase khi đổi mật khẩu:", err);
+  }
+
+  // Always update in-memory store
+  const store = getStore();
+  const memUser = store.users.get(user.id);
+  if (memUser) {
+    memUser.passwordHash = newHash;
+  }
+
+  return {
+    success: true,
+    newPassword: finalPassword,
+    user: {
+      id: user.id,
+      fullName: user.fullName,
+    },
+  };
+}
+

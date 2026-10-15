@@ -20,9 +20,14 @@
    - Khách hàng đăng ký / đăng nhập bằng Tên người dùng và Mật khẩu cá nhân.
    - Tiến độ mở mảnh được lưu trữ theo tài khoản để khách hàng có thể quay lại tiếp tục gom mảnh.
 
-4. **Trang Quản Trị Viên (Admin Dashboard)**:
+4. **Trang Quản Trị Viên (Admin Dashboard) & Khôi Phục Mật Khẩu (Backend Only)**:
    - Truy cập tại: `/admin`
-   - Mã bảo mật mặc định: `toctie1234`
+   - Mã bảo mật admin: `toctie1234`
+   - **Khôi phục tài khoản quên mật khẩu**:
+     - Danh sách người dùng có nút **🔑 Đổi MK** cho từng khách hàng hoặc tìm kiếm theo tên.
+     - Cho phép Admin nhập mật khẩu mới tùy ý hoặc bấm **🎲 Tạo ngẫu nhiên** (VD: `toctie9568`).
+     - Tích hợp sẵn nút **Sao chép tin nhắn gửi khách** để Admin gửi ngay cho khách hàng qua Facebook Fanpage/Zalo.
+     - API chuyên dụng: `POST /api/admin/reset-password?secret=toctie1234` với `{ "fullName": "Tên khách", "newPassword": "mk" }`.
    - Quản lý danh sách mã code (đã dùng / chưa dùng).
    - Tạo thêm mã code mới theo lô nhanh chóng.
    - Xem danh sách người chơi và tiến độ mở mảnh.

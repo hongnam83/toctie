@@ -1,8 +1,13 @@
-// Admin API — GET stats, users, codes
-// Secret: query param ?secret=toctie1234
+// Admin API — GET stats, users, codes & POST actions (add-codes, reset-password)
+// Secret: query param ?secret=toctie1234 or header Authorization
 
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminData, addBatchCodes, testSupabaseConnection } from "@/lib/db";
+import {
+  getAdminData,
+  addBatchCodes,
+  testSupabaseConnection,
+  resetUserPassword,
+} from "@/lib/db";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET || "toctie1234";
 
@@ -38,7 +43,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ stats, users, codes });
 }
 
-// POST — add new codes
+// POST — admin actions
 export async function POST(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const secret = searchParams.get("secret");
@@ -47,18 +52,51 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await req.json();
-  const { codes } = body as { codes: string[] };
+  try {
+    const body = await req.json();
 
-  if (!Array.isArray(codes) || codes.length === 0) {
-    return NextResponse.json({ error: "codes phải là một mảng không rỗng" }, { status: 400 });
+    // ACTION: Reset user password
+    if (body.action === "reset-password") {
+      const identifier = body.userId || body.identifier || body.fullName;
+      if (!identifier) {
+        return NextResponse.json(
+          { error: "Vui lòng cung cấp ID hoặc Tên người dùng cần đặt lại mật khẩu." },
+          { status: 400 }
+        );
+      }
+
+      const result = await resetUserPassword(identifier, body.newPassword);
+      if (!result.success) {
+        return NextResponse.json({ error: result.error }, { status: 404 });
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `Đã đặt lại mật khẩu thành công cho "${result.user?.fullName}".`,
+        user: result.user,
+        newPassword: result.newPassword,
+      });
+    }
+
+    // ACTION: Add new redemption codes
+    const codes = body.codes;
+    if (Array.isArray(codes) && codes.length > 0) {
+      const { added, skipped } = await addBatchCodes(codes);
+      return NextResponse.json({
+        message: `Đã thêm ${added.length} mã, bỏ qua ${skipped.length} mã trùng.`,
+        added,
+        skipped,
+      });
+    }
+
+    return NextResponse.json(
+      { error: "Hành động admin không hợp lệ." },
+      { status: 400 }
+    );
+  } catch {
+    return NextResponse.json(
+      { error: "Lỗi xử lý yêu cầu admin." },
+      { status: 500 }
+    );
   }
-
-  const { added, skipped } = await addBatchCodes(codes);
-
-  return NextResponse.json({
-    message: `Đã thêm ${added.length} mã, bỏ qua ${skipped.length} mã trùng.`,
-    added,
-    skipped,
-  });
 }

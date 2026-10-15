@@ -48,6 +48,15 @@ export default function AdminPage() {
   const [addMsg, setAddMsg] = useState("");
   const [filter, setFilter] = useState<"all" | "used" | "unused">("all");
 
+  // Search & Password reset states
+  const [userSearch, setUserSearch] = useState("");
+  const [resetModalUser, setResetModalUser] = useState<AdminUser | null>(null);
+  const [customPassword, setCustomPassword] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetError, setResetError] = useState("");
+  const [resetResult, setResetResult] = useState<{ fullName: string; newPassword: string } | null>(null);
+  const [copyNotice, setCopyNotice] = useState("");
+
   const fetchData = useCallback(async (s: string) => {
     setLoading(true);
     setError("");
@@ -102,6 +111,66 @@ export default function AdminPage() {
     }
   };
 
+  const handleOpenResetModal = (u: AdminUser) => {
+    setResetModalUser(u);
+    setCustomPassword("");
+    setResetError("");
+    setResetResult(null);
+    setCopyNotice("");
+  };
+
+  const handleCloseResetModal = () => {
+    setResetModalUser(null);
+    setResetResult(null);
+    setResetError("");
+    setCopyNotice("");
+  };
+
+  const handleGenerateRandomPassword = () => {
+    const rand = `toctie${Math.floor(1000 + Math.random() * 9000)}`;
+    setCustomPassword(rand);
+  };
+
+  const handleConfirmReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetModalUser) return;
+    setResetLoading(true);
+    setResetError("");
+
+    try {
+      const res = await fetch(`/api/admin?secret=${secret}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "reset-password",
+          userId: resetModalUser.id,
+          newPassword: customPassword.trim() || undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setResetError(data.error || "Không thể đặt lại mật khẩu.");
+        return;
+      }
+
+      setResetResult({
+        fullName: resetModalUser.fullName,
+        newPassword: data.newPassword,
+      });
+    } catch {
+      setResetError("Lỗi kết nối khi gửi yêu cầu.");
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    setCopyNotice(`Đã sao chép ${label}!`);
+    setTimeout(() => setCopyNotice(""), 3000);
+  };
+
   // Auto-refresh every 30s
   useEffect(() => {
     if (!authed) return;
@@ -114,6 +183,10 @@ export default function AdminPage() {
     if (filter === "unused") return !c.isUsed;
     return true;
   });
+
+  const filteredUsers = users.filter((u) =>
+    u.fullName.toLowerCase().includes(userSearch.toLowerCase().trim())
+  );
 
   if (!authed) {
     return (
@@ -237,15 +310,31 @@ export default function AdminPage() {
           </button>
         </div>
 
-        {/* Users table */}
+        {/* Users tab */}
         {tab === "users" && (
           <div className={styles.tableCard}>
             <div className={styles.tableHeader}>
-              <h2>Danh sách người tham gia</h2>
-              <span className={styles.tableCount}>{users.length} người</span>
+              <div>
+                <h2>Danh sách người tham gia</h2>
+                <span className={styles.tableCount}>
+                  {filteredUsers.length} / {users.length} người
+                </span>
+              </div>
+              <div className={styles.tableControls}>
+                <input
+                  type="text"
+                  className={styles.searchInput}
+                  placeholder="🔍 Tìm theo tên người dùng..."
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                />
+              </div>
             </div>
-            {users.length === 0 ? (
-              <div className={styles.empty}>Chưa có người tham gia nào.</div>
+
+            {filteredUsers.length === 0 ? (
+              <div className={styles.empty}>
+                {userSearch ? "Không tìm thấy người dùng nào phù hợp." : "Chưa có người tham gia nào."}
+              </div>
             ) : (
               <div className={styles.tableWrapper}>
                 <table className={styles.table}>
@@ -256,10 +345,11 @@ export default function AdminPage() {
                       <th>Mảnh ghép</th>
                       <th>Trạng thái</th>
                       <th>Mã đã dùng</th>
+                      <th>Khôi phục MK</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {users
+                    {filteredUsers
                       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                       .map((u) => (
                         <tr key={u.id} className={u.isComplete ? styles.rowComplete : ""}>
@@ -293,10 +383,23 @@ export default function AdminPage() {
                           </td>
                           <td>
                             <div className={styles.codeList}>
-                              {u.redeemedCodes.map((c) => (
-                                <code key={c} className={styles.codeTag}>{c}</code>
-                              ))}
+                              {u.redeemedCodes.length > 0 ? (
+                                u.redeemedCodes.map((c) => (
+                                  <code key={c} className={styles.codeTag}>{c}</code>
+                                ))
+                              ) : (
+                                <span style={{ color: "var(--text-muted)", fontSize: "12px" }}>Chưa nhập mã</span>
+                              )}
                             </div>
+                          </td>
+                          <td>
+                            <button
+                              className={styles.btnReset}
+                              onClick={() => handleOpenResetModal(u)}
+                              title="Tạo lại mật khẩu cho tài khoản này"
+                            >
+                              🔑 Đổi MK
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -310,23 +413,27 @@ export default function AdminPage() {
         {/* Codes tab */}
         {tab === "codes" && (
           <div className={styles.codesLayout}>
-            {/* Add codes */}
-            <div className={styles.addCodesCard}>
-              <h2>➕ Thêm mã mới</h2>
-              <p>Nhập mỗi mã một dòng, hoặc cách nhau bằng dấu phẩy.</p>
+            {/* Add codes form */}
+            <div className={styles.addCard}>
+              <h2 className={styles.addTitle}>➕ Thêm mã mới</h2>
+              <p className={styles.addSub}>
+                Nhập danh sách mã mới, phân cách bằng dấu phẩy, chấm phẩy hoặc xuống dòng.
+              </p>
               <form onSubmit={handleAddCodes} className={styles.addForm}>
                 <textarea
-                  className={`input-field ${styles.codeTextarea}`}
-                  placeholder={"TOCTIE-2010-XXXX\nTOCTIE-2010-YYYY\n..."}
+                  className={`input-field ${styles.addTextarea}`}
+                  placeholder={`TOCTIE-2010-XXXX\nTOCTIE-2010-YYYY\nTOCTIE-2010-ZZZZ`}
                   value={newCodes}
                   onChange={(e) => setNewCodes(e.target.value)}
                   rows={6}
                 />
                 {addMsg && (
-                  <div className="message message-success">{addMsg}</div>
+                  <div className={`message ${addMsg.includes("Lỗi") ? "message-error" : "message-success"}`}>
+                    {addMsg}
+                  </div>
                 )}
                 <button type="submit" className="btn btn-primary w-full">
-                  Thêm mã
+                  Thêm vào hệ thống
                 </button>
               </form>
             </div>
@@ -334,15 +441,15 @@ export default function AdminPage() {
             {/* Codes list */}
             <div className={styles.tableCard}>
               <div className={styles.tableHeader}>
-                <h2>Danh sách mã</h2>
+                <h2>Danh sách mã dự thưởng</h2>
                 <div className={styles.filterTabs}>
-                  {(["all", "used", "unused"] as const).map((f) => (
+                  {(["all", "unused", "used"] as const).map((f) => (
                     <button
                       key={f}
                       className={`${styles.filterTab} ${filter === f ? styles.filterTabActive : ""}`}
                       onClick={() => setFilter(f)}
                     >
-                      {f === "all" ? "Tất cả" : f === "used" ? "Đã dùng" : "Còn lại"}
+                      {f === "all" ? `Tất cả (${codes.length})` : f === "unused" ? `Chưa dùng (${codes.filter(c => !c.isUsed).length})` : `Đã dùng (${codes.filter(c => c.isUsed).length})`}
                     </button>
                   ))}
                 </div>
@@ -360,7 +467,9 @@ export default function AdminPage() {
                   <tbody>
                     {filteredCodes.map((c) => (
                       <tr key={c.code}>
-                        <td><code className={styles.codeMonoLg}>{c.code}</code></td>
+                        <td>
+                          <code className={styles.codeMonoLg}>{c.code}</code>
+                        </td>
                         <td>
                           {c.isUsed ? (
                             <span className={styles.badgeUsed}>✅ Đã dùng</span>
@@ -386,6 +495,129 @@ export default function AdminPage() {
           </div>
         )}
       </main>
+
+      {/* ── Modal Đặt lại Mật khẩu (Admin/Backend Only) ── */}
+      {resetModalUser && (
+        <div className={styles.modalOverlay} onClick={handleCloseResetModal}>
+          <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3 className={styles.modalTitle}>
+                <span>🔑</span> Khôi phục mật khẩu tài khoản
+              </h3>
+              <button
+                className={styles.modalCloseBtn}
+                onClick={handleCloseResetModal}
+                title="Đóng"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className={styles.modalBody}>
+              <div className={styles.modalUserHighlight}>
+                <div>
+                  Khách hàng: <strong>{resetModalUser.fullName}</strong>
+                </div>
+                <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>
+                  Mã tài khoản: <code>{resetModalUser.id}</code>
+                </div>
+              </div>
+
+              {!resetResult ? (
+                <form onSubmit={handleConfirmReset} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--navy)", marginBottom: "6px" }}>
+                      Mật khẩu mới:
+                    </label>
+                    <div className={styles.passwordInputGroup}>
+                      <input
+                        type="text"
+                        className="input-field"
+                        placeholder="Để trống để tự tạo (VD: toctie8888)..."
+                        value={customPassword}
+                        onChange={(e) => setCustomPassword(e.target.value)}
+                        style={{ flex: 1 }}
+                      />
+                      <button
+                        type="button"
+                        className={styles.btnRandom}
+                        onClick={handleGenerateRandomPassword}
+                        title="Tạo mật khẩu ngẫu nhiên"
+                      >
+                        🎲 Tạo ngẫu nhiên
+                      </button>
+                    </div>
+                    <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "6px" }}>
+                      💡 Mật khẩu này sẽ có hiệu lực ngay lập tức cho khách hàng.
+                    </div>
+                  </div>
+
+                  {resetError && <div className="message message-error">{resetError}</div>}
+
+                  <div className={styles.modalFooter} style={{ padding: 0, background: "transparent", border: "none" }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={handleCloseResetModal}
+                      disabled={resetLoading}
+                    >
+                      Hủy bỏ
+                    </button>
+                    <button
+                      type="submit"
+                      className="btn btn-primary btn-sm"
+                      disabled={resetLoading}
+                    >
+                      {resetLoading ? "Đang xử lý..." : "Xác nhận đặt lại"}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className={styles.resultBox}>
+                  <div className={styles.resultTitle}>
+                    ✅ Đã đặt lại mật khẩu thành công!
+                  </div>
+                  <div className={styles.resultPasswordDisplay}>
+                    {resetResult.newPassword}
+                  </div>
+                  <div className={styles.resultActions}>
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      onClick={() => copyToClipboard(resetResult.newPassword, "mật khẩu")}
+                    >
+                      📋 Sao chép mật khẩu
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={() =>
+                        copyToClipboard(
+                          `Dạ Tóc Tie xin chào ${resetResult.fullName}! Mật khẩu tài khoản tham gia minigame 20/10 của bạn đã được khởi tạo lại thành: ${resetResult.newPassword}. Bạn có thể đăng nhập ngay để tiếp tục gom mảnh trúng quà nhé!`,
+                          "tin nhắn gửi khách"
+                        )
+                      }
+                    >
+                      💬 Sao chép tin nhắn gửi khách
+                    </button>
+                  </div>
+                  {copyNotice && <div className={styles.copyNoticeToast}>{copyNotice}</div>}
+
+                  <div style={{ marginTop: "12px" }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm w-full"
+                      onClick={handleCloseResetModal}
+                    >
+                      Đóng cửa sổ
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
