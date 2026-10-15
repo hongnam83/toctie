@@ -4,39 +4,38 @@ param (
 
 $ErrorActionPreference = "Stop"
 
-# Di chuyển đến thư mục dự án
+# Navigate to project directory
 $ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $ProjectDir
 
-Write-Host "🎀 [Tóc Tie] Bắt đầu đồng bộ tự động lên GitHub..." -ForegroundColor Cyan
+Write-Host "[Toc Tie] Dang kiem tra thay doi..." -ForegroundColor Cyan
 
-# Kiểm tra thay đổi
+# Check for modified or untracked files
 $changes = git status --porcelain
 if (-not $changes) {
-    Write-Host "✅ Không có thay đổi nào cần cập nhật." -ForegroundColor Green
+    Write-Host "[Toc Tie] Khong co thay doi nao can day len." -ForegroundColor Green
     exit 0
 }
 
-# Add toàn bộ thay đổi
-Write-Host "📦 Đang thêm các tệp thay đổi..." -ForegroundColor Yellow
+Write-Host "[Toc Tie] Phat hien thay doi, dang stage toan bo files..." -ForegroundColor Yellow
 git add -A
 
-# Tạo thông điệp commit nếu chưa có
+# Determine commit message
 if ([string]::IsNullOrWhiteSpace($Message)) {
     $now = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $Message = "update: đồng bộ tự động $now"
+    $Message = "update: auto-sync $now"
 }
 
-Write-Host "📝 Đang commit với nội dung: '$Message'..." -ForegroundColor Yellow
+Write-Host "[Toc Tie] Dang commit: '$Message'..." -ForegroundColor Yellow
 git commit -m "$Message"
 
-# Xác định nhánh hiện tại (main hoặc master)
+# Check current branch
 $currentBranch = git branch --show-current
 if ([string]::IsNullOrWhiteSpace($currentBranch)) {
     $currentBranch = "main"
 }
 
-Write-Host "🚀 Đang đẩy lên GitHub ($currentBranch)..." -ForegroundColor Yellow
+Write-Host "[Toc Tie] Dang push len GitHub ($currentBranch)..." -ForegroundColor Yellow
 git push origin $currentBranch
 
-Write-Host "🎉 Đồng bộ thành công lên https://github.com/hongnam83/toctie!" -ForegroundColor Green
+Write-Host "[Toc Tie] Hoan tat! Da dong bo thanh cong len https://github.com/hongnam83/toctie" -ForegroundColor Green
