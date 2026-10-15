@@ -1,0 +1,462 @@
+/* PuzzleDashboard.module.css */
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: var(--cream);
+}
+
+/* ── Demo Banner ── */
+.demoBanner {
+  position: relative;
+  z-index: 20;
+  background: var(--yellow-warm);
+  border-bottom: 2px solid #FFE066;
+  padding: 10px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.demoBannerContent {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: var(--navy);
+}
+
+.demoBannerIcon { font-size: 18px; }
+
+.demoBannerText { line-height: 1.6; }
+
+.demoBannerCode {
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--white);
+  color: var(--navy);
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid #FFE066;
+  cursor: pointer;
+  margin: 0 3px;
+  transition: background 0.15s ease;
+  display: inline-block;
+}
+
+.demoBannerCode:hover {
+  background: var(--blue-light);
+}
+
+.demoBannerClose {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--text-muted);
+  padding: 4px 8px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+
+.demoBannerClose:hover {
+  background: rgba(0,0,0,0.08);
+}
+
+@media (max-width: 600px) {
+  .demoBanner {
+    padding: 10px 16px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .demoBannerClose {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+  }
+}
+
+.stripeBg {
+  position: fixed;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 30px,
+    rgba(184,204,228,0.2) 30px,
+    rgba(184,204,228,0.2) 32px
+  );
+  background-color: var(--cream);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ── Header ── */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 40px;
+  background: rgba(253,252,248,0.9);
+  backdrop-filter: blur(12px);
+  border-bottom: 2px solid var(--blue-light);
+  gap: 16px;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brandName {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--navy);
+  line-height: 1.1;
+}
+
+.slogan {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: var(--blue-light);
+  border-radius: 100px;
+}
+
+.userAvatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--navy);
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.userName {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--navy);
+  max-width: 160px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.userProgress {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.logoutBtn {
+  font-size: 13px !important;
+  padding: 8px 16px !important;
+  flex-shrink: 0;
+}
+
+/* ── Main layout ── */
+.main {
+  flex: 1;
+  display: flex;
+  gap: 32px;
+  padding: 32px 40px;
+  max-width: 1100px;
+  margin: 0 auto;
+  width: 100%;
+  position: relative;
+  z-index: 10;
+  align-items: flex-start;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 340px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 88px;
+}
+
+.sideCard {
+  background: var(--white);
+  border-radius: var(--radius-xl);
+  padding: 28px;
+  box-shadow: var(--shadow-medium);
+  border: 2px solid var(--blue-light);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sideTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--navy);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+}
+
+.sideTitleIcon {
+  font-size: 22px;
+}
+
+.sideDesc {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.sideDesc strong {
+  color: var(--navy);
+}
+
+/* ── Code form ── */
+.codeForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── Progress ── */
+.progressBox {
+  background: var(--blue-light);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.progressHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--navy);
+  font-weight: 600;
+}
+
+.progressCount {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.progressBar {
+  height: 8px;
+  background: var(--white);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--navy) 0%, var(--navy-light) 100%);
+  border-radius: 4px;
+  transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.progressDots {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.progressDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--white);
+  border: 2px solid var(--blue-pastel);
+  transition: all 0.3s ease;
+}
+
+.progressDotFilled {
+  background: var(--navy);
+  border-color: var(--navy);
+  transform: scale(1.2);
+}
+
+.progressNote {
+  font-size: 13px;
+  color: var(--navy);
+  text-align: center;
+  font-weight: 500;
+  margin: 0;
+}
+
+.winBtn {
+  font-size: 16px !important;
+  padding: 16px !important;
+  animation: winPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes winPulse {
+  0%, 100% { box-shadow: 0 4px 16px rgba(244,197,211,0.4); }
+  50% { box-shadow: 0 8px 32px rgba(244,197,211,0.7), 0 0 0 6px rgba(244,197,211,0.15); }
+}
+
+/* ── How to box ── */
+.howToBox {
+  border: 2px dashed var(--blue-pastel);
+  border-radius: var(--radius-md);
+  padding: 14px;
+}
+
+.howToTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 8px;
+}
+
+.howToList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.howToList li {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.howToList strong {
+  color: var(--navy);
+}
+
+/* ── Puzzle section ── */
+.puzzleSection {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.puzzleHeader {
+  text-align: center;
+}
+
+.puzzleTitle {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 8px;
+}
+
+.puzzleSubtitle {
+  font-size: 15px;
+  color: var(--text-muted);
+}
+
+.pieceLabels {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 8px;
+  margin-top: -16px;
+}
+
+.pieceLabel {
+  font-size: 12px;
+  color: var(--text-light);
+  text-align: center;
+}
+
+/* ── Code history ── */
+.codeHistory {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  border: 2px solid var(--blue-light);
+}
+
+.codeHistoryTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--navy);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.codeList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.codeTag {
+  font-size: 12px;
+  padding: 4px 10px;
+  background: var(--blue-light);
+  color: var(--navy);
+  border-radius: 100px;
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .main {
+    flex-direction: column;
+    padding: 24px 20px;
+    gap: 24px;
+  }
+
+  .sidebar {
+    width: 100%;
+    position: static;
+  }
+
+  .header {
+    padding: 12px 20px;
+    flex-wrap: wrap;
+  }
+
+  .userInfo {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .puzzleTitle {
+    font-size: 22px;
+  }
+
+  .headerRight {
+    gap: 8px;
+  }
+}

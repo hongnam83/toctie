@@ -1,0 +1,126 @@
+import { NextResponse } from "next/server";
+import { getStore } from "@/lib/store";
+
+// POST /api/redeem — redeem a code for a user
+export async function POST(req: Request) {
+  try {
+    const { userId, code } = await req.json();
+
+    if (!userId || !code) {
+      return NextResponse.json(
+        { error: "Thiếu thông tin người dùng hoặc mã." },
+        { status: 400 }
+      );
+    }
+
+    const store = getStore();
+    const user = store.users.get(userId);
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Không tìm thấy tài khoản. Vui lòng đăng nhập lại." },
+        { status: 404 }
+      );
+    }
+
+    const normalizedCode = code.trim().toUpperCase();
+    const redemptionCode = store.codes.get(normalizedCode);
+
+    // Check code exists
+    if (!redemptionCode) {
+      return NextResponse.json(
+        { error: "Mã không hợp lệ. Vui lòng kiểm tra lại." },
+        { status: 404 }
+      );
+    }
+
+    // Check code already used
+    if (redemptionCode.isUsed) {
+      return NextResponse.json(
+        { error: "Mã này đã được sử dụng rồi." },
+        { status: 409 }
+      );
+    }
+
+    // Check user already used this code (extra safety)
+    if (user.redeemedCodes.includes(normalizedCode)) {
+      return NextResponse.json(
+        { error: "Bạn đã sử dụng mã này rồi." },
+        { status: 409 }
+      );
+    }
+
+    // Check user already has 4 pieces
+    if (user.unlockedPieces.length >= 4) {
+      return NextResponse.json(
+        { error: "Bạn đã mở đủ 4 mảnh ghép rồi! Hãy nhận phần thưởng của bạn 🎁" },
+        { status: 400 }
+      );
+    }
+
+    // Determine which pieces are still locked
+    const allPieces = [0, 1, 2, 3];
+    const lockedPieces = allPieces.filter(
+      (p) => !user.unlockedPieces.includes(p)
+    );
+
+    // Pick a random locked piece
+    const randomIndex = Math.floor(Math.random() * lockedPieces.length);
+    const newPiece = lockedPieces[randomIndex];
+
+    // Mark code as used
+    redemptionCode.isUsed = true;
+    redemptionCode.usedBy = user.fullName; // Store name for admin readability
+    redemptionCode.usedAt = new Date().toISOString();
+
+    // Update user
+    user.unlockedPieces.push(newPiece);
+    user.redeemedCodes.push(normalizedCode);
+
+    const isComplete = user.unlockedPieces.length === 4;
+
+    return NextResponse.json({
+      success: true,
+      newPiece,
+      unlockedPieces: user.unlockedPieces,
+      isComplete,
+      message: isComplete
+        ? "🎉 Chúc mừng! Bạn đã hoàn thành bộ sưu tập!"
+        : `✨ Mảnh ghép thứ ${user.unlockedPieces.length} đã được mở!`,
+    });
+  } catch {
+    return NextResponse.json({ error: "Lỗi server. Vui lòng thử lại." }, { status: 500 });
+  }
+}
+
+// GET /api/redeem?userId=... — get user puzzle state
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get("userId");
+
+    if (!userId) {
+      return NextResponse.json({ error: "Thiếu userId." }, { status: 400 });
+    }
+
+    const store = getStore();
+    const user = store.users.get(userId);
+
+    if (!user) {
+      return NextResponse.json({ error: "Không tìm thấy tài khoản." }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      user: {
+        id: user.id,
+        fullName: user.fullName,
+        unlockedPieces: user.unlockedPieces,
+        redeemedCodes: user.redeemedCodes,
+        isComplete: user.unlockedPieces.length === 4,
+      },
+    });
+  } catch {
+    return NextResponse.json({ error: "Lỗi server." }, { status: 500 });
+  }
+}

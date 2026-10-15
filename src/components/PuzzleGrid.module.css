@@ -1,0 +1,234 @@
+/* PuzzleGrid.module.css */
+
+.wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+/* ── Grid ── */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 6px;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-strong);
+  aspect-ratio: 1;
+  position: relative;
+  background: var(--navy);
+}
+
+.wrapperComplete .grid {
+  box-shadow: 0 0 0 4px var(--pink-pastel), var(--shadow-strong);
+}
+
+/* ── Piece ── */
+.piece {
+  position: relative;
+  overflow: hidden;
+  background: var(--blue-light);
+  transition: transform 0.2s ease;
+  min-height: 200px;
+}
+
+.pieceLocked {
+  background: var(--blue-pastel);
+  cursor: not-allowed;
+}
+
+.pieceUnlocked {
+  cursor: default;
+}
+
+.pieceNew {
+  z-index: 10;
+}
+
+.pieceComplete {
+  /* No special treatment per piece; handled at wrapper */
+}
+
+/* ── Locked state ── */
+.lockedInner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px;
+  text-align: center;
+}
+
+.lockIcon {
+  color: var(--navy);
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
+}
+
+.pieceLocked:hover .lockIcon {
+  opacity: 0.8;
+}
+
+.lockPieceNum {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--navy);
+  opacity: 0.7;
+}
+
+.lockHint {
+  font-size: 11px;
+  color: var(--navy);
+  opacity: 0.5;
+}
+
+/* ── Unlocked piece artwork ── */
+.artworkWrapper {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.artworkWrapper svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ── Hover overlay on unlocked piece ── */
+.pieceOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(30,45,107,0.75);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+
+.pieceUnlocked:hover .pieceOverlay {
+  opacity: 1;
+}
+
+.pieceOverlayIcon {
+  font-size: 28px;
+}
+
+.pieceOverlayLabel {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--white);
+}
+
+/* ── New piece badge ── */
+.newBadge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--pink-pastel);
+  color: var(--navy);
+  border-radius: 100px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: var(--shadow-soft);
+  animation: badgePop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  z-index: 20;
+}
+
+@keyframes badgePop {
+  from { transform: scale(0) rotate(-10deg); opacity: 0; }
+  to { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+/* ── Center ribbon connector ── */
+.centerDot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 20;
+  background: var(--white);
+  border-radius: 50%;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 12px rgba(30,45,107,0.2);
+  border: 3px solid var(--navy);
+}
+
+/* ── Complete overlay ── */
+.completeOverlay {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-xl);
+  background: rgba(30,45,107,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 30;
+  animation: completeFadeIn 0.5s ease;
+}
+
+@keyframes completeFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.completeText {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: 24px 36px;
+  text-align: center;
+  box-shadow: var(--shadow-strong);
+  animation: completePop 0.5s 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes completePop {
+  from { transform: scale(0.7); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.completeEmoji {
+  font-size: 40px;
+  margin-bottom: 8px;
+}
+
+.completeTitle {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.completeSub {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .piece {
+    min-height: 140px;
+  }
+
+  .centerDot {
+    width: 40px;
+    height: 40px;
+  }
+}
