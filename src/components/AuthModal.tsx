@@ -14,49 +14,52 @@ type Tab = "login" | "register";
 
 export default function AuthModal({ onClose, onSuccess }: Props) {
   const [tab, setTab] = useState<Tab>("login");
-  const [fullName, setFullName] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [accountName, setAccountName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [quickAction, setQuickAction] = useState<"canRegister" | "canLogin" | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e: React.FormEvent, forceAction?: Tab) => {
+    if (e) e.preventDefault();
     setError("");
+    setQuickAction(null);
 
-    if (!fullName.trim()) {
-      setError("Vui lòng nhập họ và tên của bạn.");
+    const trimmed = accountName.trim();
+    if (!trimmed) {
+      setError("Vui lòng nhập tên tài khoản của bạn.");
       return;
     }
-    if (fullName.trim().length < 2) {
-      setError("Họ và tên phải có ít nhất 2 ký tự.");
+    if (trimmed.length < 2) {
+      setError("Tên tài khoản phải có ít nhất 2 ký tự.");
       return;
     }
-    if (!password) {
-      setError("Vui lòng nhập mật khẩu.");
-      return;
-    }
-    if (password.length < 4) {
-      setError("Mật khẩu phải có ít nhất 4 ký tự.");
-      return;
-    }
-    if (tab === "register" && password !== confirmPassword) {
-      setError("Mật khẩu xác nhận không khớp.");
+    if (trimmed.length > 50) {
+      setError("Tên tài khoản tối đa 50 ký tự.");
       return;
     }
 
+    const action = forceAction || tab;
     setLoading(true);
+
     try {
       const res = await fetch("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fullName: fullName.trim(), password, action: tab }),
+        body: JSON.stringify({ accountName: trimmed, action }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Đã có lỗi xảy ra. Vui lòng thử lại.");
+        if (data.notFound) {
+          setError(`Chưa tìm thấy tài khoản "${trimmed}".`);
+          setQuickAction("canRegister");
+        } else if (data.exists) {
+          setError(`Tài khoản "${trimmed}" đã có người đăng ký.`);
+          setQuickAction("canLogin");
+        } else {
+          setError(data.error || "Đã có lỗi xảy ra. Vui lòng thử lại.");
+        }
         return;
       }
 
@@ -68,6 +71,16 @@ export default function AuthModal({ onClose, onSuccess }: Props) {
     }
   };
 
+  const handleQuickRegister = () => {
+    setTab("register");
+    handleSubmit(null as unknown as React.FormEvent, "register");
+  };
+
+  const handleQuickLogin = () => {
+    setTab("login");
+    handleSubmit(null as unknown as React.FormEvent, "login");
+  };
+
   const handleOverlayClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) onClose();
   };
@@ -77,7 +90,7 @@ export default function AuthModal({ onClose, onSuccess }: Props) {
       className="modal-overlay"
       role="dialog"
       aria-modal="true"
-      aria-label={tab === "login" ? "Đăng nhập" : "Đăng ký"}
+      aria-label={tab === "login" ? "Đăng nhập bằng tài khoản riêng" : "Tạo tài khoản riêng mới"}
       onClick={handleOverlayClick}
     >
       <div className={styles.modal}>
@@ -98,12 +111,12 @@ export default function AuthModal({ onClose, onSuccess }: Props) {
         <div className={styles.header}>
           <TocTieLogo size={64} />
           <h2 className={styles.title}>
-            {tab === "login" ? "Chào mừng trở lại!" : "Tham gia ngay!"}
+            {tab === "login" ? "Đăng nhập tài khoản" : "Tạo tài khoản riêng"}
           </h2>
           <p className={styles.subtitle}>
             {tab === "login"
-              ? "Đăng nhập để xem bộ sưu tập mảnh ghép của bạn"
-              : "Đăng ký để bắt đầu hành trình thu thập mảnh ghép"}
+              ? "Nhập tên tài khoản của bạn để tiếp tục gom 4 mảnh ghép"
+              : "Tự đặt một tên tài khoản riêng để lưu giữ các mảnh ghép dự thưởng"}
           </p>
         </div>
 
@@ -113,7 +126,11 @@ export default function AuthModal({ onClose, onSuccess }: Props) {
             role="tab"
             aria-selected={tab === "login"}
             className={`${styles.tab} ${tab === "login" ? styles.tabActive : ""}`}
-            onClick={() => { setTab("login"); setError(""); }}
+            onClick={() => {
+              setTab("login");
+              setError("");
+              setQuickAction(null);
+            }}
             type="button"
           >
             Đăng nhập
@@ -122,66 +139,60 @@ export default function AuthModal({ onClose, onSuccess }: Props) {
             role="tab"
             aria-selected={tab === "register"}
             className={`${styles.tab} ${tab === "register" ? styles.tabActive : ""}`}
-            onClick={() => { setTab("register"); setError(""); }}
+            onClick={() => {
+              setTab("register");
+              setError("");
+              setQuickAction(null);
+            }}
             type="button"
           >
-            Đăng ký mới
+            Tạo tài khoản mới
           </button>
         </div>
 
         {/* Form */}
-        <form className={styles.form} onSubmit={handleSubmit} noValidate>
+        <form className={styles.form} onSubmit={(e) => handleSubmit(e)} noValidate>
           <div className="input-group">
-            <label className="input-label" htmlFor="auth-name">
-              Họ và tên
+            <label className="input-label" htmlFor="auth-account-name">
+              {tab === "login" ? "Tên tài khoản của bạn" : "Tên tài khoản riêng bạn muốn đặt"}
             </label>
             <input
-              id="auth-name"
+              id="auth-account-name"
               type="text"
-              className={`input-field ${error && !fullName.trim() ? "error" : ""}`}
-              placeholder="Nhập họ và tên của bạn..."
-              value={fullName}
-              onChange={(e) => { setFullName(e.target.value); setError(""); }}
-              autoComplete="name"
+              className={`input-field ${error && !accountName.trim() ? "error" : ""}`}
+              placeholder={
+                tab === "login"
+                  ? "Nhập tên tài khoản bạn đã tạo..."
+                  : "Ví dụ: maianh2010, thuy_tien, 0912345678..."
+              }
+              value={accountName}
+              onChange={(e) => {
+                setAccountName(e.target.value);
+                setError("");
+                setQuickAction(null);
+              }}
               autoFocus
-              maxLength={60}
+              maxLength={50}
             />
           </div>
 
-          <div className="input-group">
-            <label className="input-label" htmlFor="auth-password">
-              Mật khẩu
-            </label>
-            <input
-              id="auth-password"
-              type="password"
-              className={`input-field ${error && !password ? "error" : ""}`}
-              placeholder={tab === "register" ? "Tạo mật khẩu (ít nhất 4 ký tự)..." : "Nhập mật khẩu..."}
-              value={password}
-              onChange={(e) => { setPassword(e.target.value); setError(""); }}
-              autoComplete={tab === "register" ? "new-password" : "current-password"}
-              maxLength={100}
-            />
-          </div>
-
-          {tab === "register" && (
-            <div className="input-group">
-              <label className="input-label" htmlFor="auth-confirm">
-                Xác nhận mật khẩu
-              </label>
-              <input
-                id="auth-confirm"
-                type="password"
-                className={`input-field ${error && password !== confirmPassword ? "error" : ""}`}
-                placeholder="Nhập lại mật khẩu..."
-                value={confirmPassword}
-                onChange={(e) => { setConfirmPassword(e.target.value); setError(""); }}
-                autoComplete="new-password"
-                maxLength={100}
-              />
+          {/* Friendly Note */}
+          <div className={styles.inputNote}>
+            <span>💡</span>
+            <div>
+              {tab === "login" ? (
+                <>
+                  <strong>Đăng nhập không cần mật khẩu:</strong> Bạn chỉ cần nhập đúng tên tài khoản riêng đã tạo để tiếp tục gom mảnh ghép.
+                </>
+              ) : (
+                <>
+                  <strong>Lưu ý:</strong> Bạn có thể dùng tên riêng, nickname hoặc số điện thoại. Hãy nhớ tên này để vào lại lần sau nhé!
+                </>
+              )}
             </div>
-          )}
+          </div>
 
+          {/* Error Message */}
           {error && (
             <div className="message message-error" role="alert">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -189,7 +200,36 @@ export default function AuthModal({ onClose, onSuccess }: Props) {
                 <line x1="12" y1="8" x2="12" y2="12" />
                 <line x1="12" y1="16" x2="12.01" y2="16" />
               </svg>
-              {error}
+              <span>{error}</span>
+            </div>
+          )}
+
+          {/* Quick Action Prompt */}
+          {quickAction === "canRegister" && (
+            <div className={styles.quickActionBox}>
+              <span>Bạn có muốn tạo tài khoản mới với tên <strong>"{accountName.trim()}"</strong> ngay không?</span>
+              <button
+                type="button"
+                className={styles.quickActionBtn}
+                onClick={handleQuickRegister}
+                disabled={loading}
+              >
+                🎉 Tạo mới tài khoản "{accountName.trim()}"
+              </button>
+            </div>
+          )}
+
+          {quickAction === "canLogin" && (
+            <div className={styles.quickActionBox}>
+              <span>Đây có phải tài khoản của bạn không? Bạn có thể đăng nhập ngay:</span>
+              <button
+                type="button"
+                className={styles.quickActionBtn}
+                onClick={handleQuickLogin}
+                disabled={loading}
+              >
+                🚀 Đăng nhập vào "{accountName.trim()}"
+              </button>
             </div>
           )}
 
@@ -206,7 +246,7 @@ export default function AuthModal({ onClose, onSuccess }: Props) {
               </>
             ) : (
               <>
-                {tab === "login" ? "Đăng nhập" : "Tạo tài khoản"}
+                {tab === "login" ? "Vào ghép tranh" : "Tạo tài khoản & Bắt đầu"}
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
@@ -217,15 +257,31 @@ export default function AuthModal({ onClose, onSuccess }: Props) {
           <p className={styles.switchNote}>
             {tab === "login" ? (
               <>
-                Chưa có tài khoản?{" "}
-                <button type="button" className={styles.switchLink} onClick={() => { setTab("register"); setError(""); }}>
-                  Đăng ký ngay
+                Chưa có tài khoản riêng?{" "}
+                <button
+                  type="button"
+                  className={styles.switchLink}
+                  onClick={() => {
+                    setTab("register");
+                    setError("");
+                    setQuickAction(null);
+                  }}
+                >
+                  Tạo tài khoản mới
                 </button>
               </>
             ) : (
               <>
-                Đã có tài khoản?{" "}
-                <button type="button" className={styles.switchLink} onClick={() => { setTab("login"); setError(""); }}>
+                Đã có tài khoản trước đó?{" "}
+                <button
+                  type="button"
+                  className={styles.switchLink}
+                  onClick={() => {
+                    setTab("login");
+                    setError("");
+                    setQuickAction(null);
+                  }}
+                >
                   Đăng nhập
                 </button>
               </>

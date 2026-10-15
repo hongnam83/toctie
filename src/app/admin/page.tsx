@@ -48,13 +48,13 @@ export default function AdminPage() {
   const [addMsg, setAddMsg] = useState("");
   const [filter, setFilter] = useState<"all" | "used" | "unused">("all");
 
-  // Search & Password reset states
+  // Search & Account modal states
   const [userSearch, setUserSearch] = useState("");
-  const [resetModalUser, setResetModalUser] = useState<AdminUser | null>(null);
-  const [customPassword, setCustomPassword] = useState("");
-  const [resetLoading, setResetLoading] = useState(false);
-  const [resetError, setResetError] = useState("");
-  const [resetResult, setResetResult] = useState<{ fullName: string; newPassword: string } | null>(null);
+  const [modalUser, setModalUser] = useState<AdminUser | null>(null);
+  const [newAccountName, setNewAccountName] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionError, setActionError] = useState("");
+  const [actionSuccess, setActionSuccess] = useState("");
   const [copyNotice, setCopyNotice] = useState("");
 
   const fetchData = useCallback(async (s: string) => {
@@ -111,57 +111,57 @@ export default function AdminPage() {
     }
   };
 
-  const handleOpenResetModal = (u: AdminUser) => {
-    setResetModalUser(u);
-    setCustomPassword("");
-    setResetError("");
-    setResetResult(null);
+  const handleOpenUserModal = (u: AdminUser) => {
+    setModalUser(u);
+    setNewAccountName(u.fullName);
+    setActionError("");
+    setActionSuccess("");
     setCopyNotice("");
   };
 
-  const handleCloseResetModal = () => {
-    setResetModalUser(null);
-    setResetResult(null);
-    setResetError("");
+  const handleCloseUserModal = () => {
+    setModalUser(null);
+    setActionError("");
+    setActionSuccess("");
     setCopyNotice("");
   };
 
-  const handleGenerateRandomPassword = () => {
-    const rand = `toctie${Math.floor(1000 + Math.random() * 9000)}`;
-    setCustomPassword(rand);
-  };
-
-  const handleConfirmReset = async (e: React.FormEvent) => {
+  const handleRenameAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!resetModalUser) return;
-    setResetLoading(true);
-    setResetError("");
+    if (!modalUser) return;
+    if (!newAccountName.trim() || newAccountName.trim().length < 2) {
+      setActionError("Tên tài khoản mới phải có ít nhất 2 ký tự.");
+      return;
+    }
+
+    setActionLoading(true);
+    setActionError("");
+    setActionSuccess("");
 
     try {
       const res = await fetch(`/api/admin?secret=${secret}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: "reset-password",
-          userId: resetModalUser.id,
-          newPassword: customPassword.trim() || undefined,
+          action: "rename-account",
+          userId: modalUser.id,
+          newAccountName: newAccountName.trim(),
         }),
       });
 
       const data = await res.json();
       if (!res.ok) {
-        setResetError(data.error || "Không thể đặt lại mật khẩu.");
+        setActionError(data.error || "Không thể đổi tên tài khoản.");
         return;
       }
 
-      setResetResult({
-        fullName: resetModalUser.fullName,
-        newPassword: data.newPassword,
-      });
+      setActionSuccess(`Đã đổi tên tài khoản thành: "${data.newName}".`);
+      setModalUser({ ...modalUser, fullName: data.newName });
+      fetchData(secret);
     } catch {
-      setResetError("Lỗi kết nối khi gửi yêu cầu.");
+      setActionError("Lỗi kết nối khi gửi yêu cầu.");
     } finally {
-      setResetLoading(false);
+      setActionLoading(false);
     }
   };
 
@@ -300,7 +300,7 @@ export default function AdminPage() {
             className={`${styles.tab} ${tab === "users" ? styles.tabActive : ""}`}
             onClick={() => setTab("users")}
           >
-            👥 Người dùng ({users.length})
+            👥 Tài khoản người dùng ({users.length})
           </button>
           <button
             className={`${styles.tab} ${tab === "codes" ? styles.tabActive : ""}`}
@@ -315,16 +315,16 @@ export default function AdminPage() {
           <div className={styles.tableCard}>
             <div className={styles.tableHeader}>
               <div>
-                <h2>Danh sách người tham gia</h2>
+                <h2>Danh sách tài khoản khách hàng</h2>
                 <span className={styles.tableCount}>
-                  {filteredUsers.length} / {users.length} người
+                  {filteredUsers.length} / {users.length} tài khoản
                 </span>
               </div>
               <div className={styles.tableControls}>
                 <input
                   type="text"
                   className={styles.searchInput}
-                  placeholder="🔍 Tìm theo tên người dùng..."
+                  placeholder="🔍 Tìm theo tên tài khoản..."
                   value={userSearch}
                   onChange={(e) => setUserSearch(e.target.value)}
                 />
@@ -333,19 +333,19 @@ export default function AdminPage() {
 
             {filteredUsers.length === 0 ? (
               <div className={styles.empty}>
-                {userSearch ? "Không tìm thấy người dùng nào phù hợp." : "Chưa có người tham gia nào."}
+                {userSearch ? "Không tìm thấy tài khoản nào phù hợp." : "Chưa có tài khoản nào được tạo."}
               </div>
             ) : (
               <div className={styles.tableWrapper}>
                 <table className={styles.table}>
                   <thead>
                     <tr>
-                      <th>Họ và tên</th>
+                      <th>Tài khoản riêng</th>
                       <th>Ngày tham gia</th>
                       <th>Mảnh ghép</th>
                       <th>Trạng thái</th>
                       <th>Mã đã dùng</th>
-                      <th>Khôi phục MK</th>
+                      <th>Hỗ trợ / Quản lý</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -355,7 +355,7 @@ export default function AdminPage() {
                         <tr key={u.id} className={u.isComplete ? styles.rowComplete : ""}>
                           <td className={styles.tdName}>
                             <span className={styles.avatar}>{u.fullName.charAt(0).toUpperCase()}</span>
-                            {u.fullName}
+                            <strong>{u.fullName}</strong>
                           </td>
                           <td className={styles.tdDate}>
                             {new Date(u.createdAt).toLocaleDateString("vi-VN", {
@@ -395,10 +395,10 @@ export default function AdminPage() {
                           <td>
                             <button
                               className={styles.btnReset}
-                              onClick={() => handleOpenResetModal(u)}
-                              title="Tạo lại mật khẩu cho tài khoản này"
+                              onClick={() => handleOpenUserModal(u)}
+                              title="Xem thông tin và hỗ trợ tài khoản này"
                             >
-                              🔑 Đổi MK
+                              👤 Quản lý
                             </button>
                           </td>
                         </tr>
@@ -460,7 +460,7 @@ export default function AdminPage() {
                     <tr>
                       <th>Mã</th>
                       <th>Trạng thái</th>
-                      <th>Người dùng</th>
+                      <th>Tài khoản sử dụng</th>
                       <th>Thời gian dùng</th>
                     </tr>
                   </thead>
@@ -496,17 +496,17 @@ export default function AdminPage() {
         )}
       </main>
 
-      {/* ── Modal Đặt lại Mật khẩu (Admin/Backend Only) ── */}
-      {resetModalUser && (
-        <div className={styles.modalOverlay} onClick={handleCloseResetModal}>
+      {/* ── Modal Quản Lý & Hỗ Trợ Tài Khoản Khách Hàng ── */}
+      {modalUser && (
+        <div className={styles.modalOverlay} onClick={handleCloseUserModal}>
           <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
               <h3 className={styles.modalTitle}>
-                <span>🔑</span> Khôi phục mật khẩu tài khoản
+                <span>👤</span> Quản lý tài khoản khách hàng
               </h3>
               <button
                 className={styles.modalCloseBtn}
-                onClick={handleCloseResetModal}
+                onClick={handleCloseUserModal}
                 title="Đóng"
               >
                 ✕
@@ -515,105 +515,87 @@ export default function AdminPage() {
 
             <div className={styles.modalBody}>
               <div className={styles.modalUserHighlight}>
-                <div>
-                  Khách hàng: <strong>{resetModalUser.fullName}</strong>
+                <div style={{ fontSize: "16px", marginBottom: "4px" }}>
+                  Tên tài khoản: <strong style={{ color: "var(--navy)" }}>{modalUser.fullName}</strong>
                 </div>
-                <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>
-                  Mã tài khoản: <code>{resetModalUser.id}</code>
+                <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                  Mã ID: <code>{modalUser.id}</code> · Tiến độ: <strong>{modalUser.pieceCount}/4 mảnh</strong>
+                </div>
+                <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
+                  Mã đã nhập: {modalUser.redeemedCodes.length > 0 ? modalUser.redeemedCodes.join(", ") : "Chưa nhập mã nào"}
                 </div>
               </div>
 
-              {!resetResult ? (
-                <form onSubmit={handleConfirmReset} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                  <div>
-                    <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--navy)", marginBottom: "6px" }}>
-                      Mật khẩu mới:
-                    </label>
-                    <div className={styles.passwordInputGroup}>
-                      <input
-                        type="text"
-                        className="input-field"
-                        placeholder="Để trống để tự tạo (VD: toctie8888)..."
-                        value={customPassword}
-                        onChange={(e) => setCustomPassword(e.target.value)}
-                        style={{ flex: 1 }}
-                      />
-                      <button
-                        type="button"
-                        className={styles.btnRandom}
-                        onClick={handleGenerateRandomPassword}
-                        title="Tạo mật khẩu ngẫu nhiên"
-                      >
-                        🎲 Tạo ngẫu nhiên
-                      </button>
-                    </div>
-                    <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "6px" }}>
-                      💡 Mật khẩu này sẽ có hiệu lực ngay lập tức cho khách hàng.
-                    </div>
-                  </div>
-
-                  {resetError && <div className="message message-error">{resetError}</div>}
-
-                  <div className={styles.modalFooter} style={{ padding: 0, background: "transparent", border: "none" }}>
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-sm"
-                      onClick={handleCloseResetModal}
-                      disabled={resetLoading}
-                    >
-                      Hủy bỏ
-                    </button>
-                    <button
-                      type="submit"
-                      className="btn btn-primary btn-sm"
-                      disabled={resetLoading}
-                    >
-                      {resetLoading ? "Đang xử lý..." : "Xác nhận đặt lại"}
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                <div className={styles.resultBox}>
-                  <div className={styles.resultTitle}>
-                    ✅ Đã đặt lại mật khẩu thành công!
-                  </div>
-                  <div className={styles.resultPasswordDisplay}>
-                    {resetResult.newPassword}
-                  </div>
-                  <div className={styles.resultActions}>
-                    <button
-                      type="button"
-                      className="btn btn-primary btn-sm"
-                      onClick={() => copyToClipboard(resetResult.newPassword, "mật khẩu")}
-                    >
-                      📋 Sao chép mật khẩu
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-sm"
-                      onClick={() =>
-                        copyToClipboard(
-                          `Dạ Tóc Tie xin chào ${resetResult.fullName}! Mật khẩu tài khoản tham gia minigame 20/10 của bạn đã được khởi tạo lại thành: ${resetResult.newPassword}. Bạn có thể đăng nhập ngay để tiếp tục gom mảnh trúng quà nhé!`,
-                          "tin nhắn gửi khách"
-                        )
-                      }
-                    >
-                      💬 Sao chép tin nhắn gửi khách
-                    </button>
-                  </div>
-                  {copyNotice && <div className={styles.copyNoticeToast}>{copyNotice}</div>}
-
-                  <div style={{ marginTop: "12px" }}>
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-sm w-full"
-                      onClick={handleCloseResetModal}
-                    >
-                      Đóng cửa sổ
-                    </button>
-                  </div>
+              {/* Fast Copy Tools for Customer Support */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--navy)" }}>
+                  Hỗ trợ khách hàng quên tên tài khoản:
+                </span>
+                <div className={styles.resultActions}>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={() => copyToClipboard(modalUser.fullName, "tên tài khoản")}
+                  >
+                    📋 Sao chép tên tài khoản
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={() =>
+                      copyToClipboard(
+                        `Dạ Tóc Tie xin chào bạn! Tên tài khoản tham gia chiến dịch 20/10 của bạn là: "${modalUser.fullName}". Bạn chỉ cần truy cập website và nhập đúng tên tài khoản này (không cần mật khẩu) là có thể tiếp tục ghép tranh gom quà nhé!`,
+                        "tin nhắn gửi khách"
+                      )
+                    }
+                  >
+                    💬 Sao chép tin nhắn gửi khách
+                  </button>
                 </div>
-              )}
+                {copyNotice && <div className={styles.copyNoticeToast} style={{ textAlign: "center" }}>{copyNotice}</div>}
+              </div>
+
+              <hr style={{ border: "none", borderTop: "1px dashed var(--blue-pastel)", margin: "8px 0" }} />
+
+              {/* Rename Account form */}
+              <form onSubmit={handleRenameAccount} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                <label style={{ fontSize: "13px", fontWeight: 700, color: "var(--navy)" }}>
+                  Đổi tên tài khoản (nếu khách gõ nhầm):
+                </label>
+                <div className={styles.passwordInputGroup}>
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="Nhập tên tài khoản mới..."
+                    value={newAccountName}
+                    onChange={(e) => {
+                      setNewAccountName(e.target.value);
+                      setActionError("");
+                      setActionSuccess("");
+                    }}
+                    style={{ flex: 1 }}
+                  />
+                  <button
+                    type="submit"
+                    className="btn btn-secondary btn-sm"
+                    disabled={actionLoading || newAccountName.trim() === modalUser.fullName}
+                  >
+                    {actionLoading ? "Đang lưu..." : "Lưu tên mới"}
+                  </button>
+                </div>
+                {actionError && <div className="message message-error">{actionError}</div>}
+                {actionSuccess && <div className="message message-success">{actionSuccess}</div>}
+              </form>
+
+              <div style={{ marginTop: "8px" }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm w-full"
+                  onClick={handleCloseUserModal}
+                >
+                  Đóng cửa sổ
+                </button>
+              </div>
             </div>
           </div>
         </div>

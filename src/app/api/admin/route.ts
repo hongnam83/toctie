@@ -1,4 +1,4 @@
-// Admin API — GET stats, users, codes & POST actions (add-codes, reset-password)
+// Admin API — GET stats, users, codes & POST actions (add-codes, reset-password, rename-account)
 // Secret: query param ?secret=toctie1234 or header Authorization
 
 import { NextRequest, NextResponse } from "next/server";
@@ -7,6 +7,7 @@ import {
   addBatchCodes,
   testSupabaseConnection,
   resetUserPassword,
+  renameUserAccount,
 } from "@/lib/db";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET || "toctie1234";
@@ -55,7 +56,27 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // ACTION: Reset user password
+    // ACTION: Rename user account
+    if (body.action === "rename-account") {
+      const { userId, newAccountName } = body;
+      if (!userId || !newAccountName) {
+        return NextResponse.json(
+          { error: "Vui lòng cung cấp userId và newAccountName." },
+          { status: 400 }
+        );
+      }
+      const result = await renameUserAccount(userId, newAccountName);
+      if (!result.success) {
+        return NextResponse.json({ error: result.error }, { status: 400 });
+      }
+      return NextResponse.json({
+        success: true,
+        message: `Đổi tên tài khoản thành "${result.newName}" thành công.`,
+        newName: result.newName,
+      });
+    }
+
+    // ACTION: Reset user password (for legacy or admin password set)
     if (body.action === "reset-password") {
       const identifier = body.userId || body.identifier || body.fullName;
       if (!identifier) {

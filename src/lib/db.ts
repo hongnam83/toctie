@@ -390,3 +390,46 @@ export async function resetUserPassword(
   };
 }
 
+/**
+ * Rename / Update user account name (Admin only)
+ */
+export async function renameUserAccount(
+  userId: string,
+  newAccountName: string
+): Promise<{ success: boolean; newName?: string; error?: string }> {
+  const trimmed = newAccountName.trim();
+  if (!trimmed || trimmed.length < 2) {
+    return { success: false, error: "Tên tài khoản mới phải có ít nhất 2 ký tự." };
+  }
+
+  // Check if name is taken
+  const existing = await findUserByName(trimmed);
+  if (existing && existing.id !== userId) {
+    return { success: false, error: `Tên tài khoản "${trimmed}" đã có người sử dụng.` };
+  }
+
+  try {
+    const { error } = await supabaseAdmin
+      .from("users")
+      .update({ full_name: trimmed })
+      .eq("id", userId);
+
+    if (error) {
+      console.warn("Lỗi khi cập nhật tên trên Supabase:", error.message);
+    }
+  } catch (err) {
+    console.warn("Lỗi kết nối Supabase khi đổi tên tài khoản:", err);
+  }
+
+  const store = getStore();
+  const user = store.users.get(userId);
+  if (user) {
+    store.usersByName.delete(user.fullName.toLowerCase());
+    user.fullName = trimmed;
+    store.usersByName.set(trimmed.toLowerCase(), userId);
+  }
+
+  return { success: true, newName: trimmed };
+}
+
+
