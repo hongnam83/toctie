@@ -285,30 +285,27 @@ export default function LandingHero({ onOpenAuth }: Props) {
                 </button>
               </div>
 
-              {/* Social Proof & Trust Bar */}
-              <div className={styles.heroTrustBar}>
-                <div className={styles.trustItem}>
-                  <span className={styles.trustIcon}>🎁</span>
-                  <div className={styles.trustText}>
-                    <strong>100% Nhận quà</strong>
-                    <span>Khi gom đủ 4 góc tranh</span>
-                  </div>
+              {/* Boutique Reassurance Row (Authentic, no emojis, no fake SaaS boxes) */}
+              <div className={styles.heroFeatureRow}>
+                <div className={styles.featureItem}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <span>Mở góc ngẫu nhiên, không bị trùng</span>
                 </div>
-                <div className={styles.trustDivider} />
-                <div className={styles.trustItem}>
-                  <span className={styles.trustIcon}>🎀</span>
-                  <div className={styles.trustText}>
-                    <strong>tóc.tie Authentic</strong>
-                    <span>Phụ kiện lụa bồng bềnh</span>
-                  </div>
+                <span className={styles.featureDivider}>•</span>
+                <div className={styles.featureItem}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <span>Chỉ cần biệt danh để lưu tiến độ</span>
                 </div>
-                <div className={styles.trustDivider} />
-                <div className={styles.trustItem}>
-                  <span className={styles.trustIcon}>⚡</span>
-                  <div className={styles.trustText}>
-                    <strong>Mở góc tức thì</strong>
-                    <span>Nhập mã dự thưởng</span>
-                  </div>
+                <span className={styles.featureDivider}>•</span>
+                <div className={styles.featureItem}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <span>Set quà tri ân dịp 20/10</span>
                 </div>
               </div>
             </div>
@@ -316,15 +313,6 @@ export default function LandingHero({ onOpenAuth }: Props) {
 
           {/* Right Column: Interlocking Puzzle Box Teaser */}
           <div className={styles.heroVisualCol}>
-            {/* Floating Top Feature Badge */}
-            <div className={styles.floatingTeaserBadgeTop}>
-              <span className={styles.floatingBadgeIcon}>🌸</span>
-              <div className={styles.floatingBadgeContent}>
-                <strong>Set quà tri ân 20/10</strong>
-                <span>Kèm thiệp chúc viết tay</span>
-              </div>
-            </div>
-
             <div className={styles.puzzleTeaserCard}>
               {/* Badge top of board */}
               <div className={styles.teaserHeader}>
@@ -438,15 +426,6 @@ export default function LandingHero({ onOpenAuth }: Props) {
               </div>
             </div>
 
-            {/* Floating Bottom Feature Badge */}
-            <div className={styles.floatingTeaserBadgeBottom}>
-              <span className={styles.floatingBadgeIcon}>✨</span>
-              <div className={styles.floatingBadgeContent}>
-                <strong>Mở 4 góc = 1 phần quà</strong>
-                <span>Tri ân độc quyền từ tóc.tie</span>
-              </div>
-            </div>
-
             {/* Floating decorative vector elements */}
             <div className={styles.floatStickerBow} aria-hidden="true">
               <svg width="44" height="44" viewBox="0 0 48 48" fill="none">
@@ -555,25 +534,21 @@ export default function LandingHero({ onOpenAuth }: Props) {
               </div>
             </div>
 
-            {/* Section A Bottom Callout Bar */}
-            <div className={styles.journeyBottomBanner}>
-              <div className={styles.bannerLeftRow}>
-                <span className={styles.bannerIconBox}>🎁</span>
-                <div className={styles.bannerTextBox}>
-                  <strong>Bạn đã có mã dự thưởng từ đơn hàng tóc.tie?</strong>
-                  <p>Nhập mã ngay để giải mã góc tranh bí mật đầu tiên và lưu lại tiến độ mở quà!</p>
-                </div>
-              </div>
+            {/* Centered Boutique Action Row */}
+            <div className={styles.journeyActionRow}>
               <button
-                className={`btn btn-primary ${styles.bannerCtaBtn}`}
+                className={`btn btn-primary btn-lg ${styles.journeyActionBtn}`}
                 onClick={onOpenAuth}
                 type="button"
               >
-                <span>Nhập mã nhận thưởng ngay</span>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <span>Bắt đầu nhập mã ngay</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </button>
+              <span className={styles.journeyActionHint}>
+                Mỗi đơn hàng quà tặng tại tiệm đều có kèm thiệp chứa mã dự thưởng.
+              </span>
             </div>
           </div>
         </div>
@@ -585,11 +560,6 @@ export default function LandingHero({ onOpenAuth }: Props) {
         <div className={styles.sectionContainer}>
           <div className={styles.mysteryCard}>
             <div className={styles.mysteryVisual}>
-              {/* Floating Gift Badges */}
-              <div className={styles.floatingGiftBadgeTop}>
-                <span>🌸</span>
-                <span>Hộp quà thắt nơ</span>
-              </div>
               <div className={styles.giftBoxIllustration}>
                 {/* Handcrafted Gift Box SVG */}
                 <svg width="240" height="240" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -619,10 +589,6 @@ export default function LandingHero({ onOpenAuth }: Props) {
                   <circle cx="160" cy="50" r="5" fill="#F4C5D3" stroke="#1E2D6B" strokeWidth="1.5" />
                 </svg>
               </div>
-              <div className={styles.floatingGiftBadgeBottom}>
-                <span>💝</span>
-                <span>100% Quà tặng độc quyền</span>
-              </div>
             </div>
 
             <div className={styles.mysteryContent}>
@@ -644,13 +610,26 @@ export default function LandingHero({ onOpenAuth }: Props) {
                 <div className={styles.mysteryPoint}>
                   <div className={styles.mysteryPointIconBox}>
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1E2D6B" strokeWidth="2" strokeLinecap="round">
+                      <circle cx="12" cy="12" r="9" />
+                      <path d="M12 3a9 9 0 0 0 0 18" fill="#F4C5D3" />
+                    </svg>
+                  </div>
+                  <div>
+                    <strong>Phụ kiện lụa & kẹp nơ xinh</strong>
+                    <p>Chất liệu voan lụa bồng bềnh, êm ái nâng niu mái tóc nàng</p>
+                  </div>
+                </div>
+
+                <div className={styles.mysteryPoint}>
+                  <div className={styles.mysteryPointIconBox}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1E2D6B" strokeWidth="2" strokeLinecap="round">
                       <rect x="3" y="8" width="18" height="13" rx="2" />
                       <path d="M12 8v13M3 13h18M7.5 8a2.5 2.5 0 0 1 0-5A4.5 4.5 0 0 1 12 8a4.5 4.5 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5" />
                     </svg>
                   </div>
                   <div>
-                    <strong>Quà tặng giới hạn 20/10</strong>
-                    <p>Dành riêng cho khách hàng hoàn tất đủ 4 mảnh ghép</p>
+                    <strong>Hộp quà kraft vintage</strong>
+                    <p>Đóng gói tỉ mỉ cùng nơ ruy băng vải voan và rơm lót hoa khô tinh tế</p>
                   </div>
                 </div>
 
@@ -662,21 +641,8 @@ export default function LandingHero({ onOpenAuth }: Props) {
                     </svg>
                   </div>
                   <div>
-                    <strong>Thiệp chúc ý nghĩa</strong>
-                    <p>Kèm lời nhắn gửi yêu thương viết tay đến người nhận</p>
-                  </div>
-                </div>
-
-                <div className={styles.mysteryPoint}>
-                  <div className={styles.mysteryPointIconBox}>
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1E2D6B" strokeWidth="2" strokeLinecap="round">
-                      <circle cx="12" cy="12" r="9" />
-                      <path d="M12 3a9 9 0 0 0 0 18" fill="#F4C5D3" />
-                    </svg>
-                  </div>
-                  <div>
-                    <strong>Phụ kiện lụa cao cấp</strong>
-                    <p>Scrunchie & kẹp nơ bồng bềnh, êm ái bảo vệ mái tóc</p>
+                    <strong>Thiệp chúc viết tay</strong>
+                    <p>Lời nhắn gửi yêu thương viết tay chân thành gửi gắm đến người nhận</p>
                   </div>
                 </div>
 
@@ -687,8 +653,8 @@ export default function LandingHero({ onOpenAuth }: Props) {
                     </svg>
                   </div>
                   <div>
-                    <strong>Đóng gói kraft chỉn chu</strong>
-                    <p>Hộp quà thắt nơ ruy băng kèm rơm lót hoa khô tinh tế</p>
+                    <strong>Món quà tri ân miễn phí</strong>
+                    <p>Phần quà đặc quyền dành riêng cho khách hàng tóc.tie hoàn tất 4 mảnh</p>
                   </div>
                 </div>
               </div>
@@ -815,12 +781,13 @@ export default function LandingHero({ onOpenAuth }: Props) {
 
               {/* Support Callout Card */}
               <div className={styles.faqSupportCard}>
-                <div className={styles.supportBadge}>
-                  <span>💬 Hỗ trợ trực tuyến</span>
+                <div className={styles.supportBoutiqueHeader}>
+                  <TocTieLogo size={34} />
+                  <span className={styles.supportBoutiqueName}>Góc nhắn nhủ từ tóc.tie</span>
                 </div>
-                <h3 className={styles.supportTitle}>Bạn vẫn còn câu hỏi khác?</h3>
+                <h3 className={styles.supportTitle}>Bạn cần tụi mình hỗ trợ thêm?</h3>
                 <p className={styles.supportText}>
-                  Đội ngũ tóc.tie luôn sẵn sàng lắng nghe và hỗ trợ bạn xác thực mã nhận thưởng trong vòng 5 phút qua Fanpage.
+                  Nếu có bất kỳ câu hỏi nào về mã dự thưởng hoặc đơn hàng, bạn đừng ngần ngại gửi tin nhắn cho tóc.tie qua Fanpage nhé! Tụi mình luôn sẵn lòng giải đáp.
                 </p>
                 <a
                   href="https://www.facebook.com/toc.tie26"
@@ -831,12 +798,11 @@ export default function LandingHero({ onOpenAuth }: Props) {
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                   </svg>
-                  <span>Nhắn tin Fanpage tóc.tie</span>
+                  <span>Nhắn tin qua Fanpage tóc.tie</span>
                 </a>
-                <div className={styles.supportStatusRow}>
-                  <span className={styles.supportDot} />
-                  <span>Trực tuyến hỗ trợ 24/7 suốt mùa 20/10</span>
-                </div>
+                <span className={styles.supportHoursText}>
+                  Phản hồi nhanh trong ngày • 8:00 – 22:00
+                </span>
               </div>
             </div>
 

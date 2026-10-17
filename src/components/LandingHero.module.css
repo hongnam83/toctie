@@ -294,7 +294,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px 0 36px;
+  padding: 12px 0 20px;
   width: 100%;
   box-sizing: border-box;
 }
@@ -306,7 +306,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: clamp(40px, 4.5vw, 76px);
+  gap: clamp(32px, 4vw, 64px);
   width: 100%;
   box-sizing: border-box;
 }
@@ -315,7 +315,7 @@
 .heroContent {
   flex: 1.15;
   min-width: 0;
-  max-width: 780px;
+  max-width: 740px;
 }
 
 .campaignBadge {
@@ -325,11 +325,11 @@
   background: var(--pink-pastel);
   color: var(--navy);
   border: 1.5px solid var(--pink-deep);
-  padding: 8px 22px;
+  padding: 7px 20px;
   border-radius: 100px;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 700;
-  margin-bottom: 22px;
+  margin-bottom: 12px;
   box-shadow: var(--shadow-subtle);
 }
 
@@ -349,11 +349,11 @@
 }
 
 .mainHeadline {
-  font-size: clamp(42px, 4.5vw, 66px);
+  font-size: clamp(36px, 4vw, 56px);
   font-weight: 800;
   line-height: 1.14;
   color: var(--navy);
-  margin-bottom: 22px;
+  margin-bottom: 14px;
   letter-spacing: -0.02em;
 }
 
@@ -378,11 +378,11 @@
 }
 
 .heroDescription {
-  font-size: 18px;
-  line-height: 1.75;
+  font-size: 16px;
+  line-height: 1.65;
   color: var(--text-muted);
-  margin-bottom: 24px;
-  max-width: 680px;
+  margin-bottom: 16px;
+  max-width: 660px;
 }
 
 .heroDescription strong {
@@ -394,12 +394,12 @@
 .miniStepsList {
   display: inline-flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   background: var(--white);
-  padding: 9px 22px;
+  padding: 7px 18px;
   border-radius: 100px;
   border: 2px solid var(--blue-light);
-  margin-bottom: 26px;
+  margin-bottom: 18px;
   box-shadow: var(--shadow-subtle);
   flex-wrap: wrap;
 }
@@ -408,7 +408,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 700;
   color: var(--navy);
 }
@@ -417,26 +417,26 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   background: var(--blue-pastel);
   color: var(--navy);
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 800;
   font-family: 'Shantell Sans', cursive;
 }
 
 .miniStepDivider {
   color: var(--text-light);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 /* CTA Group */
 .ctaGroup {
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 14px;
   align-items: flex-start;
   width: 100%;
 }
@@ -444,22 +444,22 @@
 .ctaRow {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   flex-wrap: wrap;
 }
 
 .mainCtaBtn {
-  font-size: 18px !important;
-  padding: 18px 44px !important;
+  font-size: 16px !important;
+  padding: 14px 36px !important;
   border-radius: 100px;
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .secondaryCtaBtn {
-  font-size: 16px !important;
-  padding: 17px 32px !important;
+  font-size: 15px !important;
+  padding: 13px 26px !important;
   border-radius: 100px;
   display: inline-flex;
   align-items: center;
@@ -479,144 +479,53 @@
   transform: translateY(-2px);
 }
 
-/* Trust Bar filling bottom space */
-.heroTrustBar {
+/* Authentic Boutique Reassurance Row */
+.heroFeatureRow {
   display: flex;
   align-items: center;
-  gap: 18px;
-  padding: 16px 24px;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-radius: 20px;
-  border: 1.5px solid var(--blue-pastel);
-  box-shadow: 0 4px 18px rgba(30, 45, 107, 0.06);
-  max-width: 760px;
-  width: 100%;
-  box-sizing: border-box;
+  gap: 16px;
+  margin-top: 6px;
+  flex-wrap: wrap;
 }
 
-.trustItem {
-  display: flex;
+.featureItem {
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
-  flex: 1;
-  min-width: 0;
-}
-
-.trustIcon {
-  font-size: 24px;
-  flex-shrink: 0;
-}
-
-.trustText {
-  display: flex;
-  flex-direction: column;
-}
-
-.trustText strong {
+  gap: 7px;
   font-size: 13.5px;
-  color: var(--navy);
-  font-weight: 700;
-  line-height: 1.25;
-}
-
-.trustText span {
-  font-size: 12px;
+  font-weight: 600;
   color: var(--text-muted);
-  line-height: 1.35;
-  white-space: nowrap;
 }
 
-.trustDivider {
-  width: 1px;
-  height: 32px;
-  background: var(--blue-pastel);
+.featureItem svg {
+  color: var(--navy);
   flex-shrink: 0;
+}
+
+.featureItem span {
+  color: var(--navy);
+  font-size: 13px;
+}
+
+.featureDivider {
+  color: var(--blue-pastel);
+  font-size: 14px;
 }
 
 /* ── Right Hero: Puzzle Teaser Card ── */
 .heroVisualCol {
   flex: 1;
-  min-width: 440px;
-  max-width: 600px;
+  min-width: 380px;
+  max-width: 480px;
   position: relative;
   display: flex;
   justify-content: center;
 }
 
-.floatingTeaserBadgeTop {
-  position: absolute;
-  top: -20px;
-  left: -28px;
-  background: var(--white);
-  border: 2px solid var(--pink-pastel);
-  box-shadow: 0 6px 20px rgba(30, 45, 107, 0.1);
-  border-radius: 100px;
-  padding: 9px 18px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  z-index: 15;
-  animation: floatSlow 3.8s ease-in-out infinite;
-}
-
-.floatingTeaserBadgeTop strong {
-  display: block;
-  font-size: 12.5px;
-  color: var(--navy);
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-.floatingTeaserBadgeTop span {
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.floatingTeaserBadgeBottom {
-  position: absolute;
-  bottom: -22px;
-  right: -24px;
-  background: var(--white);
-  border: 2px solid var(--blue-pastel);
-  box-shadow: 0 6px 20px rgba(30, 45, 107, 0.1);
-  border-radius: 100px;
-  padding: 9px 18px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  z-index: 15;
-  animation: floatSlow 3.4s ease-in-out infinite 1.2s;
-}
-
-.floatingTeaserBadgeBottom strong {
-  display: block;
-  font-size: 12.5px;
-  color: var(--navy);
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-.floatingTeaserBadgeBottom span {
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.floatingBadgeIcon {
-  font-size: 20px;
-  flex-shrink: 0;
-}
-
-.floatingBadgeContent {
-  display: flex;
-  flex-direction: column;
-}
-
 .puzzleTeaserCard {
   background: var(--white);
-  border-radius: 40px;
-  padding: 30px;
+  border-radius: 32px;
+  padding: 22px;
   box-shadow: var(--shadow-strong);
   border: 4px solid var(--blue-pastel);
   position: relative;
@@ -1017,60 +926,29 @@
   border: 1px solid var(--blue-pastel);
 }
 
-/* Section A Bottom Callout Bar */
-.journeyBottomBanner {
-  margin-top: 22px;
-  background: var(--blue-subtle);
-  border: 1.5px solid var(--blue-pastel);
-  border-radius: 20px;
-  padding: 14px 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-}
-
-.bannerLeftRow {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex: 1;
-  min-width: 0;
-}
-
-.bannerIconBox {
-  font-size: 26px;
-  flex-shrink: 0;
-}
-
-.bannerTextBox {
+/* Section A Bottom Action Row */
+.journeyActionRow {
+  margin-top: 28px;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
 }
 
-.bannerTextBox strong {
-  font-size: 15px;
-  color: var(--navy);
-  font-weight: 700;
-  margin-bottom: 2px;
-}
-
-.bannerTextBox p {
-  margin: 0;
-  font-size: 13.5px;
-  color: var(--text-muted);
-  line-height: 1.4;
-}
-
-.bannerCtaBtn {
-  font-size: 14.5px !important;
-  padding: 12px 24px !important;
+.journeyActionBtn {
+  font-size: 16px !important;
+  padding: 14px 38px !important;
   border-radius: 100px;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-  white-space: nowrap;
+  gap: 10px;
+}
+
+.journeyActionHint {
+  font-size: 13.5px;
+  color: var(--text-muted);
 }
 
 /* ── Section B: Mystery Gift (Full Viewport) ── */
@@ -1126,42 +1004,6 @@
   align-items: center;
   justify-content: center;
   position: relative;
-}
-
-.floatingGiftBadgeTop {
-  align-self: flex-start;
-  margin-bottom: -14px;
-  background: var(--white);
-  border: 1.5px solid var(--pink-pastel);
-  box-shadow: 0 4px 14px rgba(30, 45, 107, 0.08);
-  border-radius: 100px;
-  padding: 7px 16px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--navy);
-  z-index: 5;
-  animation: floatSlow 3.5s ease-in-out infinite;
-}
-
-.floatingGiftBadgeBottom {
-  align-self: flex-end;
-  margin-top: -14px;
-  background: var(--white);
-  border: 1.5px solid var(--yellow-gold);
-  box-shadow: 0 4px 14px rgba(30, 45, 107, 0.08);
-  border-radius: 100px;
-  padding: 7px 16px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--navy);
-  z-index: 5;
-  animation: floatSlow 3.2s ease-in-out infinite 1s;
 }
 
 .giftBoxIllustration {
@@ -1527,15 +1369,17 @@
   gap: 14px;
 }
 
-.supportBadge {
-  align-self: flex-start;
-  background: var(--blue-subtle);
-  color: var(--navy);
-  font-size: 12.5px;
+.supportBoutiqueHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.supportBoutiqueName {
+  font-size: 14.5px;
   font-weight: 700;
-  padding: 6px 14px;
-  border-radius: 100px;
-  border: 1px solid var(--blue-pastel);
+  color: var(--navy);
+  font-family: 'Shantell Sans', cursive;
 }
 
 .supportTitle {
@@ -1575,23 +1419,12 @@
   box-shadow: 0 6px 20px rgba(30, 45, 107, 0.25);
 }
 
-.supportStatusRow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.supportHoursText {
   font-size: 12.5px;
   color: var(--text-muted);
-  font-weight: 600;
+  font-style: italic;
+  text-align: center;
   margin-top: 2px;
-}
-
-.supportDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #10B981;
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
-  animation: pulseGlow 2s ease-in-out infinite;
 }
 
 .faqListCol {
@@ -1888,25 +1721,9 @@
     gap: 40px;
   }
 
-  .journeyBottomBanner {
-    flex-direction: column;
-    text-align: center;
-    gap: 16px;
-    padding: 24px 20px;
-  }
-
-  .bannerLeftRow {
-    flex-direction: column;
-    text-align: center;
-    gap: 10px;
-  }
-
-  .bannerTextBox {
-    text-align: center;
-  }
-
-  .bannerCtaBtn {
+  .journeyActionBtn {
     width: 100%;
+    max-width: 360px;
     justify-content: center;
   }
 
@@ -1977,23 +1794,18 @@
   .floatStickerBow,
   .floatStickerStar1,
   .floatStickerStar2,
-  .floatStickerHeart,
-  .floatingTeaserBadgeTop,
-  .floatingTeaserBadgeBottom,
-  .floatingGiftBadgeTop,
-  .floatingGiftBadgeBottom {
+  .floatStickerHeart {
     display: none;
   }
 
-  .heroTrustBar {
+  .heroFeatureRow {
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
-    padding: 14px 18px;
-    width: 100%;
+    gap: 8px;
+    margin-top: 14px;
   }
 
-  .trustDivider {
+  .featureDivider {
     display: none;
   }
 
