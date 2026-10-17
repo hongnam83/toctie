@@ -425,31 +425,6 @@ export default function LandingHero({ onOpenAuth }: Props) {
                 </button>
               </div>
             </div>
-
-            {/* Floating decorative vector elements */}
-            <div className={styles.floatStickerBow} aria-hidden="true">
-              <svg width="44" height="44" viewBox="0 0 48 48" fill="none">
-                <path d="M24 24C16 12 6 18 14 26C20 32 24 24 24 24Z" fill="#F4C5D3" stroke="#1E2D6B" strokeWidth="2.5" />
-                <path d="M24 24C32 12 42 18 34 26C28 32 24 24 24 24Z" fill="#F4C5D3" stroke="#1E2D6B" strokeWidth="2.5" />
-                <circle cx="24" cy="24" r="5" fill="#1E2D6B" />
-                <path d="M21 28C19 36 15 42 12 44M27 28C29 36 33 42 36 44" stroke="#1E2D6B" strokeWidth="2.5" strokeLinecap="round" />
-              </svg>
-            </div>
-            <div className={styles.floatStickerStar1} aria-hidden="true">
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L14 8L20 10L14 12L12 18L10 12L4 10L10 8Z" fill="#FFE066" stroke="#1E2D6B" strokeWidth="1.5" />
-              </svg>
-            </div>
-            <div className={styles.floatStickerStar2} aria-hidden="true">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="8" stroke="#B8CCE4" strokeWidth="2.5" strokeDasharray="3 3" />
-              </svg>
-            </div>
-            <div className={styles.floatStickerHeart} aria-hidden="true">
-              <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
-                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="#B8CCE4" stroke="#1E2D6B" strokeWidth="2" />
-              </svg>
-            </div>
           </div>
         </div>
       </section>

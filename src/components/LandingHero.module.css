@@ -689,41 +689,6 @@
   transform: translateY(-2px);
 }
 
-/* Floating vector stickers */
-.floatStickerBow,
-.floatStickerStar1,
-.floatStickerStar2,
-.floatStickerHeart {
-  position: absolute;
-  pointer-events: none;
-  z-index: 10;
-  animation: floatSlow 3.2s ease-in-out infinite;
-}
-
-.floatStickerBow {
-  top: -24px;
-  right: -14px;
-  animation-delay: 0s;
-}
-
-.floatStickerStar1 {
-  bottom: 24px;
-  right: -24px;
-  animation-delay: 0.9s;
-}
-
-.floatStickerStar2 {
-  top: 50px;
-  left: -22px;
-  animation-delay: 1.5s;
-}
-
-.floatStickerHeart {
-  bottom: -18px;
-  left: 20px;
-  animation-delay: 0.5s;
-}
-
 /* ── Shared Section Styles ── */
 .sectionContainer {
   max-width: var(--max-width);
@@ -1788,13 +1753,6 @@
   }
 
   .miniStepsList {
-    display: none;
-  }
-
-  .floatStickerBow,
-  .floatStickerStar1,
-  .floatStickerStar2,
-  .floatStickerHeart {
     display: none;
   }
 
