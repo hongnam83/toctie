@@ -8,6 +8,7 @@ const ADMIN_SECRET = "toctie1234";
 interface AdminStats {
   totalUsers: number;
   completedUsers: number;
+  usersWithPhone?: number;
   totalCodes: number;
   usedCodes: number;
   unusedCodes: number;
@@ -22,6 +23,8 @@ interface AdminStats {
 interface AdminUser {
   id: string;
   fullName: string;
+  phone?: string;
+  note?: string;
   createdAt: string;
   pieceCount: number;
   isComplete: boolean;
@@ -35,6 +38,46 @@ interface AdminCode {
   usedAt?: string;
 }
 
+const SUPABASE_SCHEMA_SQL = `-- TÓC TIE LOYALTY - SUPABASE SCHEMA
+CREATE TABLE IF NOT EXISTS public.users (
+  id TEXT PRIMARY KEY,
+  full_name TEXT UNIQUE NOT NULL,
+  phone TEXT,
+  note TEXT,
+  password_hash TEXT NOT NULL,
+  unlocked_pieces INT[] DEFAULT '{}',
+  redeemed_codes TEXT[] DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS phone TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS note TEXT;
+
+CREATE TABLE IF NOT EXISTS public.redemption_codes (
+  code TEXT PRIMARY KEY,
+  is_used BOOLEAN DEFAULT FALSE,
+  used_by TEXT,
+  used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_users_full_name ON public.users(full_name);
+CREATE INDEX IF NOT EXISTS idx_users_phone ON public.users(phone);
+CREATE INDEX IF NOT EXISTS idx_codes_is_used ON public.redemption_codes(is_used);
+
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.redemption_codes ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Service Role Full Access Users' AND tablename = 'users') THEN
+    CREATE POLICY "Service Role Full Access Users" ON public.users FOR ALL USING (true) WITH CHECK (true);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Service Role Full Access Codes' AND tablename = 'redemption_codes') THEN
+    CREATE POLICY "Service Role Full Access Codes" ON public.redemption_codes FOR ALL USING (true) WITH CHECK (true);
+  END IF;
+END $$;`;
+
 export default function AdminPage() {
   const [secret, setSecret] = useState("");
   const [authed, setAuthed] = useState(false);
@@ -44,24 +87,39 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [tab, setTab] = useState<"users" | "codes">("users");
+
+  // Code creation & maintenance
   const [newCodes, setNewCodes] = useState("");
   const [addMsg, setAddMsg] = useState("");
-  const [filter, setFilter] = useState<"all" | "used" | "unused">("all");
-
-  // Search & Account modal states
-  const [userSearch, setUserSearch] = useState("");
-  const [modalUser, setModalUser] = useState<AdminUser | null>(null);
-  const [newAccountName, setNewAccountName] = useState("");
-  const [actionLoading, setActionLoading] = useState(false);
-  const [actionError, setActionError] = useState("");
-  const [actionSuccess, setActionSuccess] = useState("");
-  const [copyNotice, setCopyNotice] = useState("");
-
-  // Code search & deletion states
+  const [codeFilter, setCodeFilter] = useState<"all" | "used" | "unused">("all");
   const [codeSearch, setCodeSearch] = useState("");
   const [selectedCodes, setSelectedCodes] = useState<string[]>([]);
   const [deleteMsg, setDeleteMsg] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // Customer registration states (Thêm & Lưu thông tin khách hàng)
+  const [newCustomerName, setNewCustomerName] = useState("");
+  const [newCustomerPhone, setNewCustomerPhone] = useState("");
+  const [newCustomerNote, setNewCustomerNote] = useState("");
+  const [newCustomerPieces, setNewCustomerPieces] = useState<number>(0);
+  const [addCustomerMsg, setAddCustomerMsg] = useState("");
+  const [addCustomerLoading, setAddCustomerLoading] = useState(false);
+
+  // User search & filters
+  const [userSearch, setUserSearch] = useState("");
+  const [userFilter, setUserFilter] = useState<"all" | "completed" | "in_progress" | "has_phone">("all");
+  const [userNoticeMsg, setUserNoticeMsg] = useState("");
+
+  // User Edit & Manage modal
+  const [modalUser, setModalUser] = useState<AdminUser | null>(null);
+  const [editFullName, setEditFullName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editNote, setEditNote] = useState("");
+  const [editPieceCount, setEditPieceCount] = useState<number>(0);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionError, setActionError] = useState("");
+  const [actionSuccess, setActionSuccess] = useState("");
+  const [copyNotice, setCopyNotice] = useState("");
 
   // Code edit modal states
   const [modalEditCode, setModalEditCode] = useState<AdminCode | null>(null);
@@ -71,6 +129,10 @@ export default function AdminPage() {
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState("");
   const [editSuccess, setEditSuccess] = useState("");
+
+  // Database setup modal state
+  const [showDbModal, setShowDbModal] = useState(false);
+  const [sqlCopied, setSqlCopied] = useState(false);
 
   const fetchData = useCallback(async (s: string) => {
     setLoading(true);
@@ -102,6 +164,190 @@ export default function AdminPage() {
 
   const handleRefresh = () => fetchData(secret);
 
+  // ── THÊM & LƯU THÔNG TIN KHÁCH HÀNG ──
+  const handleSaveCustomer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmedName = newCustomerName.trim();
+    if (!trimmedName || trimmedName.length < 2) {
+      setAddCustomerMsg("Vui lòng nhập tên tài khoản khách hàng (tối thiểu 2 ký tự).");
+      return;
+    }
+
+    setAddCustomerLoading(true);
+    setAddCustomerMsg("");
+
+    try {
+      const res = await fetch(`/api/admin?secret=${secret}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "create-user",
+          fullName: trimmedName,
+          phone: newCustomerPhone.trim(),
+          note: newCustomerNote.trim(),
+          initialPieceCount: Number(newCustomerPieces) || 0,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setAddCustomerMsg(data.error || "Lỗi khi lưu thông tin khách hàng.");
+        return;
+      }
+
+      setAddCustomerMsg(data.message || `Đã lưu khách hàng "${trimmedName}" thành công.`);
+      setNewCustomerName("");
+      setNewCustomerPhone("");
+      setNewCustomerNote("");
+      setNewCustomerPieces(0);
+      setTimeout(() => setAddCustomerMsg(""), 5000);
+      fetchData(secret);
+    } catch {
+      setAddCustomerMsg("Không thể kết nối để lưu khách hàng.");
+    } finally {
+      setAddCustomerLoading(false);
+    }
+  };
+
+  // ── SỬA THÔNG TIN KHÁCH HÀNG ──
+  const handleOpenUserModal = (u: AdminUser) => {
+    setModalUser(u);
+    setEditFullName(u.fullName);
+    setEditPhone(u.phone || "");
+    setEditNote(u.note || "");
+    setEditPieceCount(u.pieceCount);
+    setActionError("");
+    setActionSuccess("");
+    setCopyNotice("");
+  };
+
+  const handleCloseUserModal = () => {
+    setModalUser(null);
+    setActionError("");
+    setActionSuccess("");
+    setCopyNotice("");
+  };
+
+  const handleUpdateCustomer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!modalUser) return;
+
+    const trimmedName = editFullName.trim();
+    if (!trimmedName || trimmedName.length < 2) {
+      setActionError("Tên tài khoản phải có ít nhất 2 ký tự.");
+      return;
+    }
+
+    setActionLoading(true);
+    setActionError("");
+    setActionSuccess("");
+
+    try {
+      const res = await fetch(`/api/admin?secret=${secret}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update-user",
+          userId: modalUser.id,
+          fullName: trimmedName,
+          phone: editPhone.trim(),
+          note: editNote.trim(),
+          pieceCount: Number(editPieceCount),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setActionError(data.error || "Không thể cập nhật thông tin khách hàng.");
+        return;
+      }
+
+      setActionSuccess(`Đã cập nhật thông tin khách hàng "${data.user?.fullName}".`);
+      setModalUser(data.user);
+      fetchData(secret);
+      setTimeout(() => {
+        handleCloseUserModal();
+      }, 1200);
+    } catch {
+      setActionError("Lỗi kết nối khi gửi yêu cầu.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // ── XÓA KHÁCH HÀNG ──
+  const handleDeleteUser = async (userId: string, name: string) => {
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa tài khoản "${name}" khỏi hệ thống không?`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/admin?secret=${secret}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "delete-user", userId }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setUserNoticeMsg(`Đã xóa tài khoản "${name}" thành công.`);
+        setTimeout(() => setUserNoticeMsg(""), 4000);
+        if (modalUser?.id === userId) handleCloseUserModal();
+        fetchData(secret);
+      } else {
+        alert(data.error || "Không thể xóa tài khoản.");
+      }
+    } catch {
+      alert("Lỗi kết nối khi xóa tài khoản.");
+    }
+  };
+
+  // ── XUẤT FILE CSV & SAO CHÉP DANH BẠ ──
+  const handleExportCSV = () => {
+    if (users.length === 0) {
+      alert("Chưa có khách hàng nào để xuất file.");
+      return;
+    }
+
+    const headers = ["ID", "Tên tài khoản", "Số điện thoại", "Ghi chú", "Số mảnh ghép", "Trạng thái", "Ngày tham gia", "Mã đã dùng"];
+    const rows = users.map((u) => [
+      `"${u.id}"`,
+      `"${u.fullName.replace(/"/g, '""')}"`,
+      `"${(u.phone || "").replace(/"/g, '""')}"`,
+      `"${(u.note || "").replace(/"/g, '""')}"`,
+      u.pieceCount,
+      u.isComplete ? "Hoàn thành" : "Đang gom mảnh",
+      `"${new Date(u.createdAt).toLocaleString("vi-VN")}"`,
+      `"${u.redeemedCodes.join("; ")}"`,
+    ]);
+
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `danh_sach_khach_hang_toctie_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleCopyPhoneList = () => {
+    const phoneList = users
+      .map((u) => u.phone?.trim())
+      .filter((p): p is string => Boolean(p && p.length >= 7));
+
+    if (phoneList.length === 0) {
+      alert("Chưa có số điện thoại khách hàng nào được lưu.");
+      return;
+    }
+
+    navigator.clipboard.writeText(phoneList.join("\n"));
+    setUserNoticeMsg(`Đã sao chép ${phoneList.length} số điện thoại vào bộ nhớ tạm!`);
+    setTimeout(() => setUserNoticeMsg(""), 4000);
+  };
+
+  // ── THÊM MÃ CODE MỚI ──
   const handleAddCodes = async (e: React.FormEvent) => {
     e.preventDefault();
     const codeList = newCodes
@@ -158,13 +404,7 @@ export default function AdminPage() {
 
   const handleDeleteSelectedCodes = async () => {
     if (selectedCodes.length === 0) return;
-    if (
-      !window.confirm(
-        `Bạn có chắc chắn muốn xóa ${selectedCodes.length} mã đã chọn không?`
-      )
-    ) {
-      return;
-    }
+    if (!window.confirm(`Xóa ${selectedCodes.length} mã đã chọn khỏi hệ thống?`)) return;
 
     setDeleteLoading(true);
     setDeleteMsg("");
@@ -176,7 +416,7 @@ export default function AdminPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        setDeleteMsg(data.message || `Đã xóa ${selectedCodes.length} mã.`);
+        setDeleteMsg(data.message || `Đã xóa ${data.deletedCount} mã.`);
         setSelectedCodes([]);
         setTimeout(() => setDeleteMsg(""), 4000);
         fetchData(secret);
@@ -184,7 +424,7 @@ export default function AdminPage() {
         setDeleteMsg(data.error || "Lỗi khi xóa mã hàng loạt.");
       }
     } catch {
-      setDeleteMsg("Lỗi kết nối khi xóa mã hàng loạt.");
+      setDeleteMsg("Không thể kết nối để xóa mã hàng loạt.");
     } finally {
       setDeleteLoading(false);
     }
@@ -196,12 +436,7 @@ export default function AdminPage() {
       alert("Không có mã chưa sử dụng nào để xóa.");
       return;
     }
-
-    if (
-      !window.confirm(
-        `CẢNH BÁO: Bạn có muốn xóa toàn bộ ${unusedCount} mã CHƯA DÙNG khỏi hệ thống?`
-      )
-    ) {
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa toàn bộ ${unusedCount} mã CHƯA DÙNG khỏi hệ thống?`)) {
       return;
     }
 
@@ -215,7 +450,7 @@ export default function AdminPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        setDeleteMsg(data.message || "Đã xóa toàn bộ mã chưa dùng.");
+        setDeleteMsg(data.message || `Đã xóa ${data.deletedCount} mã chưa dùng.`);
         setSelectedCodes([]);
         setTimeout(() => setDeleteMsg(""), 4000);
         fetchData(secret);
@@ -223,9 +458,17 @@ export default function AdminPage() {
         setDeleteMsg(data.error || "Lỗi khi xóa mã chưa dùng.");
       }
     } catch {
-      setDeleteMsg("Lỗi kết nối khi xóa mã chưa dùng.");
+      setDeleteMsg("Không thể kết nối để xóa các mã chưa dùng.");
     } finally {
       setDeleteLoading(false);
+    }
+  };
+
+  const handleToggleSelectAll = () => {
+    if (areAllVisibleSelected) {
+      setSelectedCodes([]);
+    } else {
+      setSelectedCodes(filteredCodes.map((c) => c.code));
     }
   };
 
@@ -235,17 +478,7 @@ export default function AdminPage() {
     );
   };
 
-  const handleToggleSelectAll = () => {
-    const visibleCodes = filteredCodes.map((c) => c.code);
-    const allSelected = visibleCodes.every((c) => selectedCodes.includes(c));
-    if (allSelected) {
-      setSelectedCodes((prev) => prev.filter((c) => !visibleCodes.includes(c)));
-    } else {
-      const combined = Array.from(new Set([...selectedCodes, ...visibleCodes]));
-      setSelectedCodes(combined);
-    }
-  };
-
+  // ── CHỈNH SỬA MÃ NHẬN THƯỞNG ──
   const handleOpenEditModal = (c: AdminCode) => {
     setModalEditCode(c);
     setEditCodeString(c.code);
@@ -289,13 +522,13 @@ export default function AdminPage() {
       });
 
       const data = await res.json();
+
       if (!res.ok) {
-        setEditError(data.error || "Không thể cập nhật mã.");
+        setEditError(data.error || "Lỗi khi cập nhật mã.");
         return;
       }
 
-      setEditSuccess(`Đã cập nhật mã "${data.code?.code || trimmedCode}" thành công!`);
-      setModalEditCode(data.code);
+      setEditSuccess(data.message || "Cập nhật mã thành công!");
       fetchData(secret);
       setTimeout(() => {
         handleCloseEditModal();
@@ -337,60 +570,6 @@ export default function AdminPage() {
     }
   };
 
-  const handleOpenUserModal = (u: AdminUser) => {
-    setModalUser(u);
-    setNewAccountName(u.fullName);
-    setActionError("");
-    setActionSuccess("");
-    setCopyNotice("");
-  };
-
-  const handleCloseUserModal = () => {
-    setModalUser(null);
-    setActionError("");
-    setActionSuccess("");
-    setCopyNotice("");
-  };
-
-  const handleRenameAccount = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!modalUser) return;
-    if (!newAccountName.trim() || newAccountName.trim().length < 2) {
-      setActionError("Tên tài khoản mới phải có ít nhất 2 ký tự.");
-      return;
-    }
-
-    setActionLoading(true);
-    setActionError("");
-    setActionSuccess("");
-
-    try {
-      const res = await fetch(`/api/admin?secret=${secret}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "rename-account",
-          userId: modalUser.id,
-          newAccountName: newAccountName.trim(),
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        setActionError(data.error || "Không thể đổi tên tài khoản.");
-        return;
-      }
-
-      setActionSuccess(`Đã đổi tên tài khoản thành: "${data.newName}".`);
-      setModalUser({ ...modalUser, fullName: data.newName });
-      fetchData(secret);
-    } catch {
-      setActionError("Lỗi kết nối khi gửi yêu cầu.");
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     setCopyNotice(`Đã sao chép ${label}!`);
@@ -405,8 +584,8 @@ export default function AdminPage() {
   }, [authed, secret, fetchData]);
 
   const filteredCodes = codes.filter((c) => {
-    if (filter === "used" && !c.isUsed) return false;
-    if (filter === "unused" && c.isUsed) return false;
+    if (codeFilter === "used" && !c.isUsed) return false;
+    if (codeFilter === "unused" && c.isUsed) return false;
     if (codeSearch.trim()) {
       const search = codeSearch.trim().toUpperCase();
       return (
@@ -417,9 +596,21 @@ export default function AdminPage() {
     return true;
   });
 
-  const filteredUsers = users.filter((u) =>
-    u.fullName.toLowerCase().includes(userSearch.toLowerCase().trim())
-  );
+  const filteredUsers = users.filter((u) => {
+    if (userFilter === "completed" && !u.isComplete) return false;
+    if (userFilter === "in_progress" && u.isComplete) return false;
+    if (userFilter === "has_phone" && (!u.phone || !u.phone.trim())) return false;
+
+    if (userSearch.trim()) {
+      const q = userSearch.toLowerCase().trim();
+      return (
+        u.fullName.toLowerCase().includes(q) ||
+        (u.phone && u.phone.includes(q)) ||
+        u.id.toLowerCase().includes(q)
+      );
+    }
+    return true;
+  });
 
   const areAllVisibleSelected =
     filteredCodes.length > 0 &&
@@ -508,10 +699,12 @@ export default function AdminPage() {
             style={{
               padding: "12px 18px",
               borderRadius: "12px",
-              marginBottom: "20px",
+              marginBottom: "12px",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: "12px",
               background: stats.db.tablesReady
                 ? "rgba(46, 125, 50, 0.1)"
                 : "rgba(230, 81, 0, 0.1)",
@@ -545,18 +738,30 @@ export default function AdminPage() {
                 </div>
               </div>
             </div>
-            <span
-              style={{
-                fontSize: "0.78rem",
-                padding: "4px 10px",
-                borderRadius: "20px",
-                fontWeight: 600,
-                background: stats.db.tablesReady ? "#2e7d32" : "#e65100",
-                color: "#fff",
-              }}
-            >
-              {stats.db.tablesReady ? "ĐANG HOẠT ĐỘNG" : "ĐÃ KẾT NỐI (LƯU ĐĨA AN TOÀN)"}
-            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              {!stats.db.tablesReady && (
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setShowDbModal(true)}
+                  style={{ fontSize: "12px" }}
+                >
+                  Khởi tạo bảng Supabase (1 phút)
+                </button>
+              )}
+              <span
+                style={{
+                  fontSize: "0.78rem",
+                  padding: "4px 10px",
+                  borderRadius: "20px",
+                  fontWeight: 600,
+                  background: stats.db.tablesReady ? "#2e7d32" : "#e65100",
+                  color: "#fff",
+                }}
+              >
+                {stats.db.tablesReady ? "ĐANG HOẠT ĐỘNG" : "LƯU TRỮ AN TOÀN"}
+              </span>
+            </div>
           </div>
         )}
 
@@ -565,7 +770,7 @@ export default function AdminPage() {
           <div className={styles.statsGrid}>
             {[
               {
-                label: "Tổng tài khoản khách",
+                label: "Tổng khách hàng",
                 value: stats.totalUsers,
                 icon: (
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -641,7 +846,7 @@ export default function AdminPage() {
             className={`${styles.tab} ${tab === "users" ? styles.tabActive : ""}`}
             onClick={() => setTab("users")}
           >
-            Tài khoản người dùng ({users.length})
+            Quản lý khách hàng ({users.length})
           </button>
           <button
             className={`${styles.tab} ${tab === "codes" ? styles.tabActive : ""}`}
@@ -651,136 +856,356 @@ export default function AdminPage() {
           </button>
         </div>
 
-        {/* Users tab */}
+        {/* ══════════════════════════════════════════════════════════
+            USERS TAB (CHẾ ĐỘ LƯU & QUẢN LÝ THÔNG TIN KHÁCH HÀNG)
+        ══════════════════════════════════════════════════════════ */}
         {tab === "users" && (
-          <div className={styles.tableCard}>
-            <div className={styles.tableHeader}>
-              <div>
-                <h2>Danh sách tài khoản khách hàng</h2>
-                <span className={styles.tableCount}>
-                  {filteredUsers.length} / {users.length} tài khoản (Cập nhật thời gian thực)
-                </span>
-              </div>
-              <div className={styles.tableControls}>
-                <input
-                  type="text"
-                  className={styles.searchInput}
-                  placeholder="Tìm theo tên tài khoản..."
-                  value={userSearch}
-                  onChange={(e) => setUserSearch(e.target.value)}
-                />
+          <div className={styles.usersLayout}>
+            {/* Left Column: Form Thêm / Lưu thông tin khách hàng */}
+            <div className={styles.addCodesCard}>
+              <h2>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: "middle", marginRight: "6px" }}>
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="8.5" cy="7" r="4" />
+                  <line x1="20" y1="8" x2="20" y2="14" />
+                  <line x1="23" y1="11" x2="17" y2="11" />
+                </svg>
+                Lưu thông tin khách hàng
+              </h2>
+              <p>
+                Thêm trực tiếp thông tin khách hàng đã đăng ký từ Fanpage, Zalo hoặc tại quầy vào hệ thống.
+              </p>
+
+              <form onSubmit={handleSaveCustomer} className={styles.addForm}>
+                <div>
+                  <label style={{ fontSize: "13px", fontWeight: 700, color: "var(--navy)", display: "block", marginBottom: "4px" }}>
+                    Tên tài khoản / Họ tên *
+                  </label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="VD: maianh2010, Thùy Tiên..."
+                    value={newCustomerName}
+                    onChange={(e) => setNewCustomerName(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: "13px", fontWeight: 700, color: "var(--navy)", display: "block", marginBottom: "4px" }}>
+                    Số điện thoại liên hệ (tùy chọn)
+                  </label>
+                  <input
+                    type="tel"
+                    className="input-field"
+                    placeholder="VD: 0912345678..."
+                    value={newCustomerPhone}
+                    onChange={(e) => setNewCustomerPhone(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: "13px", fontWeight: 700, color: "var(--navy)", display: "block", marginBottom: "4px" }}>
+                    Ghi chú / Nguồn khách (tùy chọn)
+                  </label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="VD: Khách inbox Fanpage, khách tại quầy..."
+                    value={newCustomerNote}
+                    onChange={(e) => setNewCustomerNote(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: "13px", fontWeight: 700, color: "var(--navy)", display: "block", marginBottom: "4px" }}>
+                    Số mảnh ghép ban đầu:
+                  </label>
+                  <select
+                    className="input-field"
+                    value={newCustomerPieces}
+                    onChange={(e) => setNewCustomerPieces(Number(e.target.value))}
+                    style={{ background: "var(--white)" }}
+                  >
+                    <option value={0}>0 mảnh (Mới tạo tài khoản)</option>
+                    <option value={1}>1 mảnh (Đã mở 1 mảnh)</option>
+                    <option value={2}>2 mảnh (Đã mở 2 mảnh)</option>
+                    <option value={3}>3 mảnh (Đã mở 3 mảnh)</option>
+                    <option value={4}>4 mảnh (Hoàn thành bộ quà)</option>
+                  </select>
+                </div>
+
+                {addCustomerMsg && (
+                  <div
+                    className={`message ${
+                      addCustomerMsg.includes("Lỗi") || addCustomerMsg.includes("Vui lòng")
+                        ? "message-error"
+                        : "message-success"
+                    }`}
+                  >
+                    {addCustomerMsg}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  className="btn btn-primary w-full"
+                  disabled={addCustomerLoading}
+                >
+                  {addCustomerLoading ? "Đang lưu..." : "Lưu vào hệ thống"}
+                </button>
+              </form>
+
+              <hr style={{ border: "none", borderTop: "1px dashed var(--blue-pastel)", margin: "16px 0 12px" }} />
+
+              {/* Quick statistics */}
+              <div style={{ fontSize: "12px", color: "var(--text-muted)", display: "flex", flexDirection: "column", gap: "6px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span>Tổng khách đã lưu:</span>
+                  <strong>{users.length} tài khoản</strong>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span>Khách có số điện thoại:</span>
+                  <strong>{users.filter((u) => u.phone && u.phone.trim()).length}</strong>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span>Khách hoàn thành 4 mảnh:</span>
+                  <strong style={{ color: "#166534" }}>{users.filter((u) => u.isComplete).length}</strong>
+                </div>
               </div>
             </div>
 
-            {filteredUsers.length === 0 ? (
-              <div className={styles.empty}>
-                {userSearch
-                  ? "Không tìm thấy tài khoản nào phù hợp."
-                  : "Chưa có tài khoản nào được tạo. Khi khách đăng ký sẽ xuất hiện ngay tại đây!"}
+            {/* Right Column: Bảng danh sách khách hàng đã đăng ký */}
+            <div className={styles.tableCard}>
+              <div className={styles.tableHeader}>
+                <div>
+                  <h2>Danh sách tài khoản khách hàng đã đăng ký</h2>
+                  <span className={styles.tableCount}>
+                    {filteredUsers.length} / {users.length} khách (Tự động cập nhật thời gian thực)
+                  </span>
+                </div>
+                <div className={styles.tableControls}>
+                  <button
+                    type="button"
+                    className={styles.btnExport}
+                    onClick={handleExportCSV}
+                    title="Tải file CSV danh sách khách hàng"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    Xuất CSV
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.btnExport}
+                    onClick={handleCopyPhoneList}
+                    title="Sao chép danh sách số điện thoại để gửi tin nhắn"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                    </svg>
+                    Sao chép SĐT
+                  </button>
+                  <input
+                    type="text"
+                    className={styles.searchInput}
+                    placeholder="Tìm theo tên, SĐT..."
+                    value={userSearch}
+                    onChange={(e) => setUserSearch(e.target.value)}
+                  />
+                  <div className={styles.filterTabs}>
+                    {[
+                      { key: "all", label: `Tất cả (${users.length})` },
+                      { key: "completed", label: `Đủ 4 mảnh (${users.filter((u) => u.isComplete).length})` },
+                      { key: "in_progress", label: `Đang gom (${users.filter((u) => !u.isComplete).length})` },
+                      { key: "has_phone", label: `Có SĐT (${users.filter((u) => u.phone && u.phone.trim()).length})` },
+                    ].map((f) => (
+                      <button
+                        key={f.key}
+                        type="button"
+                        className={`${styles.filterTab} ${userFilter === f.key ? styles.filterTabActive : ""}`}
+                        onClick={() => setUserFilter(f.key as any)}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
-            ) : (
-              <div className={styles.tableWrapper}>
-                <table className={styles.table}>
-                  <thead>
-                    <tr>
-                      <th>Tài khoản riêng</th>
-                      <th>Ngày tham gia</th>
-                      <th>Mảnh ghép</th>
-                      <th>Trạng thái</th>
-                      <th>Mã đã dùng</th>
-                      <th>Hỗ trợ / Quản lý</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredUsers
-                      .sort(
-                        (a, b) =>
-                          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-                      )
-                      .map((u) => (
-                        <tr key={u.id} className={u.isComplete ? styles.rowComplete : ""}>
-                          <td className={styles.tdName}>
-                            <span className={styles.avatar}>
-                              {u.fullName.charAt(0).toUpperCase()}
-                            </span>
-                            <strong>{u.fullName}</strong>
-                          </td>
-                          <td className={styles.tdDate}>
-                            {new Date(u.createdAt).toLocaleDateString("vi-VN", {
-                              day: "2-digit",
-                              month: "2-digit",
-                              year: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </td>
-                          <td>
-                            <div className={styles.pieceBadges}>
-                              {[0, 1, 2, 3].map((i) => (
-                                <span
-                                  key={i}
-                                  className={`${styles.pieceDot} ${
-                                    u.redeemedCodes.length > i ? styles.pieceDotFilled : ""
-                                  }`}
-                                  title={`Mảnh ${i + 1}`}
-                                />
-                              ))}
-                            </div>
-                          </td>
-                          <td>
-                            {u.isComplete ? (
-                              <span className={styles.badgeComplete}>Hoàn thành</span>
-                            ) : (
-                              <span className={styles.badgeInProgress}>
-                                {u.pieceCount}/4 mảnh
+
+              {userNoticeMsg && (
+                <div className="message message-success" style={{ margin: "14px 20px 0" }}>
+                  {userNoticeMsg}
+                </div>
+              )}
+
+              {filteredUsers.length === 0 ? (
+                <div className={styles.empty}>
+                  {userSearch || userFilter !== "all"
+                    ? "Không tìm thấy khách hàng nào phù hợp với bộ lọc."
+                    : "Chưa có tài khoản khách hàng nào. Khi khách đăng ký hoặc bạn bấm Lưu ở bên trái, thông tin sẽ xuất hiện ngay tại đây!"}
+                </div>
+              ) : (
+                <div className={styles.tableWrapper}>
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th>Khách hàng</th>
+                        <th>Số điện thoại</th>
+                        <th>Ghi chú</th>
+                        <th>Ngày đăng ký</th>
+                        <th>Mảnh ghép</th>
+                        <th>Trạng thái</th>
+                        <th>Mã đã dùng</th>
+                        <th>Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredUsers
+                        .sort(
+                          (a, b) =>
+                            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                        )
+                        .map((u) => (
+                          <tr key={u.id} className={u.isComplete ? styles.rowComplete : ""}>
+                            <td className={styles.tdName}>
+                              <span className={styles.avatar}>
+                                {u.fullName.charAt(0).toUpperCase()}
                               </span>
-                            )}
-                          </td>
-                          <td>
-                            <div className={styles.codeList}>
-                              {u.redeemedCodes.length > 0 ? (
-                                u.redeemedCodes.map((c) => (
-                                  <code key={c} className={styles.codeTag}>
-                                    {c}
-                                  </code>
-                                ))
+                              <div>
+                                <strong>{u.fullName}</strong>
+                                <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "monospace" }}>
+                                  {u.id.slice(0, 10)}...
+                                </div>
+                              </div>
+                            </td>
+                            <td>
+                              {u.phone ? (
+                                <span
+                                  className={styles.customerPhoneBadge}
+                                  onClick={() => copyToClipboard(u.phone!, "số điện thoại")}
+                                  title="Bấm để sao chép số điện thoại"
+                                >
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                                  </svg>
+                                  {u.phone}
+                                </span>
                               ) : (
-                                <span style={{ color: "var(--text-muted)", fontSize: "12px" }}>
-                                  Chưa nhập mã
+                                <span style={{ color: "var(--text-muted)", fontSize: "12px" }}>—</span>
+                              )}
+                            </td>
+                            <td>
+                              {u.note ? (
+                                <div className={styles.customerNoteText} title={u.note}>
+                                  {u.note}
+                                </div>
+                              ) : (
+                                <span style={{ color: "var(--text-muted)", fontSize: "12px" }}>—</span>
+                              )}
+                            </td>
+                            <td className={styles.tdDate}>
+                              {new Date(u.createdAt).toLocaleDateString("vi-VN", {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </td>
+                            <td>
+                              <div className={styles.pieceBadges}>
+                                {[0, 1, 2, 3].map((i) => (
+                                  <span
+                                    key={i}
+                                    className={`${styles.pieceDot} ${
+                                      u.pieceCount > i ? styles.pieceDotFilled : ""
+                                    }`}
+                                    title={`Mảnh ${i + 1}`}
+                                  />
+                                ))}
+                              </div>
+                            </td>
+                            <td>
+                              {u.isComplete ? (
+                                <span className={styles.badgeComplete}>Hoàn thành</span>
+                              ) : (
+                                <span className={styles.badgeInProgress}>
+                                  {u.pieceCount}/4 mảnh
                                 </span>
                               )}
-                            </div>
-                          </td>
-                          <td>
-                            <button
-                              className={styles.btnReset}
-                              onClick={() => handleOpenUserModal(u)}
-                              title="Xem thông tin và hỗ trợ tài khoản này"
-                            >
-                              Quản lý
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                            </td>
+                            <td>
+                              <div className={styles.codeList}>
+                                {u.redeemedCodes.length > 0 ? (
+                                  u.redeemedCodes.map((c) => (
+                                    <code key={c} className={styles.codeTag}>
+                                      {c}
+                                    </code>
+                                  ))
+                                ) : (
+                                  <span style={{ color: "var(--text-muted)", fontSize: "12px" }}>
+                                    Chưa nhập mã
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td>
+                              <div className={styles.tableRowActions}>
+                                <button
+                                  type="button"
+                                  className={styles.btnEdit}
+                                  onClick={() => handleOpenUserModal(u)}
+                                  title="Chỉnh sửa thông tin khách hàng"
+                                >
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                  </svg>
+                                  Sửa
+                                </button>
+                                <button
+                                  type="button"
+                                  className={styles.btnDelete}
+                                  onClick={() => handleDeleteUser(u.id, u.fullName)}
+                                  title="Xóa tài khoản này"
+                                >
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                    <polyline points="3 6 5 6 21 6" />
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                  </svg>
+                                  Xóa
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
-        {/* Codes tab */}
+        {/* ══════════════════════════════════════════════════════════
+            CODES TAB (QUẢN LÝ MÃ DỰ THƯỞNG)
+        ══════════════════════════════════════════════════════════ */}
         {tab === "codes" && (
           <div className={styles.codesLayout}>
             {/* Add codes form */}
-            <div className={styles.addCard}>
-              <h2 className={styles.addTitle}>Thêm mã mới</h2>
-              <p className={styles.addSub}>
+            <div className={styles.addCodesCard}>
+              <h2>Thêm mã mới</h2>
+              <p>
                 Nhập danh sách mã mới, phân cách bằng dấu phẩy, chấm phẩy hoặc xuống dòng.
               </p>
               <form onSubmit={handleAddCodes} className={styles.addForm}>
                 <textarea
-                  className={`input-field ${styles.addTextarea}`}
+                  className={`input-field ${styles.codeTextarea}`}
                   placeholder={`TOCTIE-2010-XXXX\nTOCTIE-2010-YYYY\nTOCTIE-2010-ZZZZ`}
                   value={newCodes}
                   onChange={(e) => setNewCodes(e.target.value)}
@@ -854,9 +1279,9 @@ export default function AdminPage() {
                       <button
                         key={f}
                         className={`${styles.filterTab} ${
-                          filter === f ? styles.filterTabActive : ""
+                          codeFilter === f ? styles.filterTabActive : ""
                         }`}
-                        onClick={() => setFilter(f)}
+                        onClick={() => setCodeFilter(f)}
                       >
                         {f === "all"
                           ? `Tất cả (${codes.length})`
@@ -1025,13 +1450,17 @@ export default function AdminPage() {
         )}
       </main>
 
-      {/* ── Modal Quản Lý & Hỗ Trợ Tài Khoản Khách Hàng ── */}
+      {/* ── Modal Quản Lý & Chỉnh Sửa Thông Tin Khách Hàng ── */}
       {modalUser && (
         <div className={styles.modalOverlay} onClick={handleCloseUserModal}>
           <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
               <h3 className={styles.modalTitle}>
-                Quản lý tài khoản khách hàng
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+                Quản lý & Sửa thông tin khách hàng
               </h3>
               <button
                 className={styles.modalCloseBtn}
@@ -1045,11 +1474,16 @@ export default function AdminPage() {
             <div className={styles.modalBody}>
               <div className={styles.modalUserHighlight}>
                 <div style={{ fontSize: "16px", marginBottom: "4px" }}>
-                  Tên tài khoản: <strong style={{ color: "var(--navy)" }}>{modalUser.fullName}</strong>
+                  Khách hàng: <strong style={{ color: "var(--navy)" }}>{modalUser.fullName}</strong>
                 </div>
                 <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-                  Mã ID: <code>{modalUser.id}</code> · Tiến độ: <strong>{modalUser.pieceCount}/4 mảnh</strong>
+                  Mã ID: <code>{modalUser.id}</code> · Tiến trình: <strong>{modalUser.pieceCount}/4 mảnh</strong>
                 </div>
+                {modalUser.phone && (
+                  <div style={{ fontSize: "12px", color: "#166534", marginTop: "2px", fontWeight: 600 }}>
+                    Số điện thoại: {modalUser.phone}
+                  </div>
+                )}
                 <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
                   Mã đã nhập: {modalUser.redeemedCodes.length > 0 ? modalUser.redeemedCodes.join(", ") : "Chưa nhập mã nào"}
                 </div>
@@ -1058,7 +1492,7 @@ export default function AdminPage() {
               {/* Fast Copy Tools for Customer Support */}
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                 <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--navy)" }}>
-                  Hỗ trợ khách hàng quên tên tài khoản:
+                  Hỗ trợ khách hàng nhanh:
                 </span>
                 <div className={styles.resultActions}>
                   <button
@@ -1066,14 +1500,23 @@ export default function AdminPage() {
                     className="btn btn-primary btn-sm"
                     onClick={() => copyToClipboard(modalUser.fullName, "tên tài khoản")}
                   >
-                    Sao chép tên tài khoản
+                    Sao chép tên
                   </button>
+                  {modalUser.phone && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => copyToClipboard(modalUser.phone!, "số điện thoại")}
+                    >
+                      Sao chép SĐT
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="btn btn-secondary btn-sm"
                     onClick={() =>
                       copyToClipboard(
-                        `Dạ Tóc Tie xin chào bạn! Tên tài khoản tham gia chiến dịch 20/10 của bạn là: "${modalUser.fullName}". Bạn chỉ cần truy cập website và nhập đúng tên tài khoản này (không cần mật khẩu) là có thể tiếp tục ghép tranh gom quà nhé!`,
+                        `Dạ Tóc Tie xin chào bạn! Tên tài khoản tham gia chiến dịch của bạn là: "${modalUser.fullName}". Bạn chỉ cần truy cập website và nhập tên tài khoản này (không cần mật khẩu) là có thể tiếp tục ghép tranh gom quà nhé!`,
                         "tin nhắn gửi khách"
                       )
                     }
@@ -1084,47 +1527,92 @@ export default function AdminPage() {
                 {copyNotice && <div className={styles.copyNoticeToast} style={{ textAlign: "center" }}>{copyNotice}</div>}
               </div>
 
-              <hr style={{ border: "none", borderTop: "1px dashed var(--blue-pastel)", margin: "8px 0" }} />
+              <hr style={{ border: "none", borderTop: "1px dashed var(--blue-pastel)", margin: "4px 0" }} />
 
-              {/* Rename Account form */}
-              <form onSubmit={handleRenameAccount} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                <label style={{ fontSize: "13px", fontWeight: 700, color: "var(--navy)" }}>
-                  Đổi tên tài khoản (nếu khách gõ nhầm):
-                </label>
-                <div className={styles.passwordInputGroup}>
+              {/* Form Sửa thông tin */}
+              <form onSubmit={handleUpdateCustomer} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                <div>
+                  <label style={{ fontSize: "13px", fontWeight: 700, color: "var(--navy)", display: "block", marginBottom: "4px" }}>
+                    Tên tài khoản khách:
+                  </label>
                   <input
                     type="text"
                     className="input-field"
-                    placeholder="Nhập tên tài khoản mới..."
-                    value={newAccountName}
+                    value={editFullName}
                     onChange={(e) => {
-                      setNewAccountName(e.target.value);
+                      setEditFullName(e.target.value);
                       setActionError("");
-                      setActionSuccess("");
                     }}
-                    style={{ flex: 1 }}
+                    required
                   />
-                  <button
-                    type="submit"
-                    className="btn btn-secondary btn-sm"
-                    disabled={actionLoading || newAccountName.trim() === modalUser.fullName}
-                  >
-                    {actionLoading ? "Đang lưu..." : "Lưu tên mới"}
-                  </button>
                 </div>
+
+                <div>
+                  <label style={{ fontSize: "13px", fontWeight: 700, color: "var(--navy)", display: "block", marginBottom: "4px" }}>
+                    Số điện thoại:
+                  </label>
+                  <input
+                    type="tel"
+                    className="input-field"
+                    placeholder="VD: 0912345678"
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: "13px", fontWeight: 700, color: "var(--navy)", display: "block", marginBottom: "4px" }}>
+                    Ghi chú / Kênh liên hệ:
+                  </label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="VD: Inbox Facebook, VIP..."
+                    value={editNote}
+                    onChange={(e) => setEditNote(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: "13px", fontWeight: 700, color: "var(--navy)", display: "block", marginBottom: "4px" }}>
+                    Số mảnh ghép sở hữu:
+                  </label>
+                  <select
+                    className="input-field"
+                    value={editPieceCount}
+                    onChange={(e) => setEditPieceCount(Number(e.target.value))}
+                    style={{ background: "var(--white)" }}
+                  >
+                    <option value={0}>0 mảnh (Chưa mở mảnh nào)</option>
+                    <option value={1}>1 mảnh</option>
+                    <option value={2}>2 mảnh</option>
+                    <option value={3}>3 mảnh</option>
+                    <option value={4}>4 mảnh (Hoàn thành)</option>
+                  </select>
+                </div>
+
                 {actionError && <div className="message message-error">{actionError}</div>}
                 {actionSuccess && <div className="message message-success">{actionSuccess}</div>}
-              </form>
 
-              <div style={{ marginTop: "8px" }}>
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-sm w-full"
-                  onClick={handleCloseUserModal}
-                >
-                  Đóng cửa sổ
-                </button>
-              </div>
+                <div style={{ display: "flex", gap: "8px", marginTop: "6px" }}>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={actionLoading}
+                    style={{ flex: 1 }}
+                  >
+                    {actionLoading ? "Đang lưu..." : "Lưu thay đổi"}
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.btnDelete}
+                    onClick={() => handleDeleteUser(modalUser.id, modalUser.fullName)}
+                    disabled={actionLoading}
+                  >
+                    Xóa tài khoản
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>
@@ -1219,11 +1707,6 @@ export default function AdminPage() {
                     Đã sử dụng
                   </button>
                 </div>
-                <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-                  {!editCodeIsUsed
-                    ? "Mã sẽ ở trạng thái sẵn sàng để khách hàng nhập vào mở mảnh ghép."
-                    : "Mã được đánh dấu đã sử dụng, không cho phép nhập thêm lần nữa."}
-                </span>
               </div>
 
               {/* If used, user info */}
@@ -1269,6 +1752,85 @@ export default function AdminPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal Hướng Dẫn Khởi Tạo Supabase Cloud Database ── */}
+      {showDbModal && (
+        <div className={styles.modalOverlay} onClick={() => setShowDbModal(false)}>
+          <div className={styles.modalCard} onClick={(e) => e.stopPropagation()} style={{ maxWidth: "600px" }}>
+            <div className={styles.modalHeader}>
+              <h3 className={styles.modalTitle}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                </svg>
+                Khởi tạo bảng cơ sở dữ liệu Supabase
+              </h3>
+              <button
+                className={styles.modalCloseBtn}
+                onClick={() => setShowDbModal(false)}
+                title="Đóng"
+                type="button"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className={styles.modalBody}>
+              <p style={{ fontSize: "14px", lineHeight: "1.5", margin: 0 }}>
+                Hệ thống đã tự động lưu dữ liệu khách hàng an toàn. Để đồng bộ vĩnh viễn với Supabase Cloud, bạn chỉ cần thực hiện 2 bước đơn giản:
+              </p>
+
+              <ol style={{ fontSize: "13px", paddingLeft: "20px", display: "flex", flexDirection: "column", gap: "8px", margin: 0 }}>
+                <li>
+                  Bấm nút <strong>"Mở Supabase SQL Editor"</strong> bên dưới.
+                </li>
+                <li>
+                  Dán đoạn mã SQL đã copy vào khung soạn thảo và bấm <strong>Run</strong> (Chạy).
+                </li>
+              </ol>
+
+              <div style={{ position: "relative" }}>
+                <pre className={styles.sqlModalBlock}>
+                  {SUPABASE_SCHEMA_SQL}
+                </pre>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  style={{ position: "absolute", top: "10px", right: "10px", fontSize: "11px" }}
+                  onClick={() => {
+                    navigator.clipboard.writeText(SUPABASE_SCHEMA_SQL);
+                    setSqlCopied(true);
+                    setTimeout(() => setSqlCopied(false), 3000);
+                  }}
+                >
+                  {sqlCopied ? "Đã sao chép SQL!" : "Sao chép SQL"}
+                </button>
+              </div>
+
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "6px" }}>
+                <a
+                  href="https://supabase.com/dashboard/project/ylydytwnzelogiwurxcl/sql/new"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-primary"
+                  style={{ flex: 1, textAlign: "center", textDecoration: "none" }}
+                >
+                  Mở Supabase SQL Editor ➔
+                </a>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    fetchData(secret);
+                    setShowDbModal(false);
+                  }}
+                >
+                  Kiểm tra lại kết nối
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

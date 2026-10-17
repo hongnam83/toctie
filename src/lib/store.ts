@@ -1,5 +1,5 @@
 // Persistent Store for Tóc.Tie Loyalty
-// Automatically persists to local disk (data/store.json) so data is never lost across server restarts
+// Automatically persists to local disk (data/store.json or /tmp fallback) so data is never lost across server restarts
 // Also syncs with Supabase database when connected
 
 import fs from "fs";
@@ -8,6 +8,8 @@ import path from "path";
 export interface User {
   id: string;
   fullName: string;
+  phone?: string;
+  note?: string;
   passwordHash: string;
   createdAt: string;
   unlockedPieces: number[];
@@ -34,6 +36,8 @@ declare global {
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const STORE_FILE = path.join(DATA_DIR, "store.json");
+const TMP_DATA_DIR = "/tmp/toctie_data";
+const TMP_STORE_FILE = path.join(TMP_DATA_DIR, "store.json");
 
 const DEFAULT_DEMO_CODES = [
   "TOCTIE-2010-AAAA",
@@ -58,20 +62,19 @@ const DEFAULT_DEMO_CODES = [
   "TOCTIE-2010-TTTT",
 ];
 
-function ensureDataDir() {
+function ensureDir(dir: string) {
   try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
     }
-  } catch (err) {
-    console.error("Lỗi khi tạo thư mục data:", err);
+  } catch {
+    // ignore
   }
 }
 
 export function persistStore() {
   try {
     if (!global.__toctieStore) return;
-    ensureDataDir();
 
     const dataToSave = {
       users: Array.from(global.__toctieStore.users.values()),
@@ -79,9 +82,23 @@ export function persistStore() {
       updatedAt: new Date().toISOString(),
     };
 
-    fs.writeFileSync(STORE_FILE, JSON.stringify(dataToSave, null, 2), "utf-8");
+    const jsonStr = JSON.stringify(dataToSave, null, 2);
+
+    // Try primary workspace data directory
+    try {
+      ensureDir(DATA_DIR);
+      fs.writeFileSync(STORE_FILE, jsonStr, "utf-8");
+    } catch {
+      // Fallback to /tmp for serverless environments (Vercel)
+      try {
+        ensureDir(TMP_DATA_DIR);
+        fs.writeFileSync(TMP_STORE_FILE, jsonStr, "utf-8");
+      } catch (tmpErr) {
+        console.warn("Lưu tmp store thất bại:", tmpErr);
+      }
+    }
   } catch (err) {
-    console.error("Lỗi khi lưu dữ liệu ra file data/store.json:", err);
+    console.error("Lỗi khi lưu dữ liệu cửa hàng:", err);
   }
 }
 
@@ -90,14 +107,36 @@ function initStore(): StoreState {
     return global.__toctieStore;
   }
 
-  ensureDataDir();
-
   const usersMap = new Map<string, User>();
   const usersByNameMap = new Map<string, string>();
   const codesMap = new Map<string, RedemptionCode>();
 
-  // Check if store file exists on disk
-  if (fs.existsSync(STORE_FILE)) {
+  let loaded = false;
+
+  // Check /tmp first (in case running in serverless where /tmp was modified)
+  if (fs.existsSync(TMP_STORE_FILE)) {
+    try {
+      const raw = fs.readFileSync(TMP_STORE_FILE, "utf-8");
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed.users)) {
+        parsed.users.forEach((u: User) => {
+          usersMap.set(u.id, u);
+          usersByNameMap.set(u.fullName.toLowerCase(), u.id);
+        });
+      }
+      if (Array.isArray(parsed.codes)) {
+        parsed.codes.forEach((c: RedemptionCode) => {
+          codesMap.set(c.code.toUpperCase(), c);
+        });
+      }
+      loaded = true;
+    } catch {
+      // fall through
+    }
+  }
+
+  // If not loaded from tmp, check workspace STORE_FILE
+  if (!loaded && fs.existsSync(STORE_FILE)) {
     try {
       const raw = fs.readFileSync(STORE_FILE, "utf-8");
       const parsed = JSON.parse(raw);

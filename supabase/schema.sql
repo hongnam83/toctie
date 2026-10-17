@@ -6,23 +6,30 @@
 CREATE TABLE IF NOT EXISTS public.users (
   id TEXT PRIMARY KEY,
   full_name TEXT UNIQUE NOT NULL,
+  phone TEXT,
+  note TEXT,
   password_hash TEXT NOT NULL,
   unlocked_pieces INT[] DEFAULT '{}',
   redeemed_codes TEXT[] DEFAULT '{}',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Bổ sung cột phone và note nếu bảng đã được tạo trước đó
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS phone TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS note TEXT;
+
 -- 2. Bảng Mã Đổi Thưởng (redemption_codes)
 CREATE TABLE IF NOT EXISTS public.redemption_codes (
   code TEXT PRIMARY KEY,
   is_used BOOLEAN DEFAULT FALSE,
-  used_by TEXT REFERENCES public.users(id) ON DELETE SET NULL,
+  used_by TEXT,
   used_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- 3. Tạo chỉ mục tìm kiếm tối ưu
 CREATE INDEX IF NOT EXISTS idx_users_full_name ON public.users(full_name);
+CREATE INDEX IF NOT EXISTS idx_users_phone ON public.users(phone);
 CREATE INDEX IF NOT EXISTS idx_codes_is_used ON public.redemption_codes(is_used);
 
 -- 4. Bật Row Level Security (RLS)
@@ -30,15 +37,15 @@ ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.redemption_codes ENABLE ROW LEVEL SECURITY;
 
 -- Cho phép service_role toàn quyền truy cập (Backend Next.js Route Handlers sử dụng Service Role Key)
-CREATE POLICY "Service Role Full Access Users" ON public.users
-  FOR ALL
-  USING (true)
-  WITH CHECK (true);
-
-CREATE POLICY "Service Role Full Access Codes" ON public.redemption_codes
-  FOR ALL
-  USING (true)
-  WITH CHECK (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Service Role Full Access Users' AND tablename = 'users') THEN
+    CREATE POLICY "Service Role Full Access Users" ON public.users FOR ALL USING (true) WITH CHECK (true);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Service Role Full Access Codes' AND tablename = 'redemption_codes') THEN
+    CREATE POLICY "Service Role Full Access Codes" ON public.redemption_codes FOR ALL USING (true) WITH CHECK (true);
+  END IF;
+END $$;
 
 -- 5. Nạp sẵn 20 mã dự thưởng khởi đầu cho chiến dịch 20/10
 INSERT INTO public.redemption_codes (code, is_used)

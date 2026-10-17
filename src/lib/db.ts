@@ -1,5 +1,5 @@
 // Unified Database Layer for Tóc.Tie Loyalty
-// Connects to Supabase with seamless disk-persisted fallback
+// Connects to Supabase with seamless disk/tmp persisted fallback
 
 import { supabaseAdmin } from "./supabase";
 import {
@@ -25,7 +25,7 @@ export async function testSupabaseConnection(): Promise<{
   error?: string;
 }> {
   try {
-    const { data, error } = await supabaseAdmin
+    const { error } = await supabaseAdmin
       .from("redemption_codes")
       .select("code")
       .limit(1);
@@ -64,6 +64,8 @@ export async function findUserByName(fullName: string): Promise<User | null> {
       const u: User = {
         id: data.id,
         fullName: data.full_name,
+        phone: data.phone || undefined,
+        note: data.note || undefined,
         passwordHash: data.password_hash,
         createdAt: data.created_at,
         unlockedPieces: data.unlocked_pieces || [],
@@ -105,6 +107,8 @@ export async function findUserById(id: string): Promise<User | null> {
       const u: User = {
         id: data.id,
         fullName: data.full_name,
+        phone: data.phone || undefined,
+        note: data.note || undefined,
         passwordHash: data.password_hash,
         createdAt: data.created_at,
         unlockedPieces: data.unlocked_pieces || [],
@@ -129,17 +133,26 @@ export async function findUserById(id: string): Promise<User | null> {
  */
 export async function createUser(
   fullName: string,
-  passwordHash: string = "passwordless"
+  passwordHash: string = "passwordless",
+  phone?: string,
+  note?: string,
+  initialPieces?: number[]
 ): Promise<User> {
   const name = fullName.trim();
   const id = generateId();
   const createdAt = new Date().toISOString();
+  const cleanPhone = phone?.trim() || undefined;
+  const cleanNote = note?.trim() || undefined;
+  const pieces = Array.isArray(initialPieces) ? initialPieces : [];
+
   const newUser: User = {
     id,
     fullName: name,
+    phone: cleanPhone,
+    note: cleanNote,
     passwordHash,
     createdAt,
-    unlockedPieces: [],
+    unlockedPieces: pieces,
     redeemedCodes: [],
   };
 
@@ -154,8 +167,10 @@ export async function createUser(
     await supabaseAdmin.from("users").insert({
       id,
       full_name: name,
+      phone: cleanPhone || null,
+      note: cleanNote || null,
       password_hash: passwordHash,
-      unlocked_pieces: [],
+      unlocked_pieces: pieces,
       redeemed_codes: [],
       created_at: createdAt,
     });
@@ -164,6 +179,100 @@ export async function createUser(
   }
 
   return newUser;
+}
+
+/**
+ * Update user information (fullName, phone, note, unlockedPieces, redeemedCodes)
+ */
+export async function updateUser(
+  userId: string,
+  updates: {
+    fullName?: string;
+    phone?: string;
+    note?: string;
+    unlockedPieces?: number[];
+    redeemedCodes?: string[];
+  }
+): Promise<{ success: boolean; user?: User; error?: string }> {
+  const store = getStore();
+  const current = store.users.get(userId);
+  if (!current) {
+    return { success: false, error: "Không tìm thấy tài khoản người dùng." };
+  }
+
+  if (updates.fullName !== undefined) {
+    const trimmed = updates.fullName.trim();
+    if (!trimmed || trimmed.length < 2) {
+      return { success: false, error: "Tên tài khoản phải có ít nhất 2 ký tự." };
+    }
+    const existing = await findUserByName(trimmed);
+    if (existing && existing.id !== userId) {
+      return { success: false, error: `Tên tài khoản "${trimmed}" đã có người sử dụng.` };
+    }
+    store.usersByName.delete(current.fullName.toLowerCase());
+    current.fullName = trimmed;
+    store.usersByName.set(trimmed.toLowerCase(), userId);
+  }
+
+  if (updates.phone !== undefined) {
+    current.phone = updates.phone.trim() || undefined;
+  }
+
+  if (updates.note !== undefined) {
+    current.note = updates.note.trim() || undefined;
+  }
+
+  if (updates.unlockedPieces !== undefined) {
+    current.unlockedPieces = updates.unlockedPieces;
+  }
+
+  if (updates.redeemedCodes !== undefined) {
+    current.redeemedCodes = updates.redeemedCodes;
+  }
+
+  persistStore();
+
+  try {
+    await supabaseAdmin
+      .from("users")
+      .update({
+        full_name: current.fullName,
+        phone: current.phone || null,
+        note: current.note || null,
+        unlocked_pieces: current.unlockedPieces,
+        redeemed_codes: current.redeemedCodes,
+      })
+      .eq("id", userId);
+  } catch (err) {
+    console.warn("Lỗi sync Supabase updateUser:", err);
+  }
+
+  return { success: true, user: current };
+}
+
+/**
+ * Delete a user account (Admin)
+ */
+export async function deleteUser(
+  userId: string
+): Promise<{ success: boolean; error?: string }> {
+  const store = getStore();
+  const user = store.users.get(userId);
+  if (!user) {
+    return { success: false, error: "Không tìm thấy người dùng." };
+  }
+
+  store.users.delete(userId);
+  store.usersByName.delete(user.fullName.toLowerCase());
+  persistStore();
+
+  try {
+    await supabaseAdmin.from("users").delete().eq("id", userId);
+  } catch (err) {
+    console.warn("Lỗi sync Supabase deleteUser:", err);
+  }
+
+  return { success: true };
 }
 
 /**
@@ -270,6 +379,8 @@ export async function getAdminData(): Promise<{
         const userObj: User = {
           id: u.id,
           fullName: u.full_name,
+          phone: u.phone || undefined,
+          note: u.note || undefined,
           passwordHash: u.password_hash,
           createdAt: u.created_at,
           unlockedPieces: pieces,
@@ -410,12 +521,10 @@ export async function deleteUnusedRedemptionCodes(): Promise<{
 }> {
   const store = getStore();
   let count = 0;
-  const deletedCodes: string[] = [];
 
   for (const [key, val] of Array.from(store.codes.entries())) {
     if (!val.isUsed) {
       store.codes.delete(key);
-      deletedCodes.push(key);
       count++;
     }
   }
@@ -500,35 +609,11 @@ export async function renameUserAccount(
   userId: string,
   newAccountName: string
 ): Promise<{ success: boolean; newName?: string; error?: string }> {
-  const trimmed = newAccountName.trim();
-  if (!trimmed || trimmed.length < 2) {
-    return { success: false, error: "Tên tài khoản mới phải có ít nhất 2 ký tự." };
-  }
-
-  const existing = await findUserByName(trimmed);
-  if (existing && existing.id !== userId) {
-    return { success: false, error: `Tên tài khoản "${trimmed}" đã có người sử dụng.` };
-  }
-
-  const store = getStore();
-  const user = store.users.get(userId);
-  if (user) {
-    store.usersByName.delete(user.fullName.toLowerCase());
-    user.fullName = trimmed;
-    store.usersByName.set(trimmed.toLowerCase(), userId);
-    persistStore();
-  }
-
-  try {
-    await supabaseAdmin
-      .from("users")
-      .update({ full_name: trimmed })
-      .eq("id", userId);
-  } catch (err) {
-    console.warn("Lỗi kết nối Supabase khi đổi tên tài khoản:", err);
-  }
-
-  return { success: true, newName: trimmed };
+  return updateUser(userId, { fullName: newAccountName }).then((res) => ({
+    success: res.success,
+    newName: res.user?.fullName,
+    error: res.error,
+  }));
 }
 
 /**
@@ -627,4 +712,3 @@ export async function updateRedemptionCode(
 
   return { success: true, code: updatedObj };
 }
-

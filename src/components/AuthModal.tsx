@@ -15,6 +15,7 @@ type Tab = "login" | "register";
 export default function AuthModal({ onClose, onSuccess }: Props) {
   const [tab, setTab] = useState<Tab>("login");
   const [accountName, setAccountName] = useState("");
+  const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [quickAction, setQuickAction] = useState<"canRegister" | "canLogin" | null>(null);
@@ -45,7 +46,11 @@ export default function AuthModal({ onClose, onSuccess }: Props) {
       const res = await fetch("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accountName: trimmed, action }),
+        body: JSON.stringify({
+          accountName: trimmed,
+          phone: phone.trim(),
+          action,
+        }),
       });
 
       const data = await res.json();
@@ -154,7 +159,7 @@ export default function AuthModal({ onClose, onSuccess }: Props) {
         <form className={styles.form} onSubmit={(e) => handleSubmit(e)} noValidate>
           <div className="input-group">
             <label className="input-label" htmlFor="auth-account-name">
-              {tab === "login" ? "Tên tài khoản của bạn" : "Tên tài khoản riêng bạn muốn đặt"}
+              {tab === "login" ? "Tên tài khoản của bạn" : "Tên tài khoản riêng bạn muốn đặt *"}
             </label>
             <input
               id="auth-account-name"
@@ -175,6 +180,24 @@ export default function AuthModal({ onClose, onSuccess }: Props) {
               maxLength={50}
             />
           </div>
+
+          {/* Optional phone number on register */}
+          {tab === "register" && (
+            <div className="input-group" style={{ marginTop: "12px" }}>
+              <label className="input-label" htmlFor="auth-phone">
+                Số điện thoại liên hệ (tùy chọn)
+              </label>
+              <input
+                id="auth-phone"
+                type="tel"
+                className="input-field"
+                placeholder="Nhập số điện thoại để shop liên hệ trao giải..."
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                maxLength={20}
+              />
+            </div>
+          )}
 
           {/* Friendly Note */}
           <div className={styles.inputNote}>

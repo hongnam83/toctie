@@ -9,6 +9,8 @@ import WinModal from "@/components/WinModal";
 export interface UserSession {
   id: string;
   fullName: string;
+  phone?: string;
+  note?: string;
   unlockedPieces: number[];
   redeemedCodes: string[];
 }

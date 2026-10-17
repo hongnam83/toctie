@@ -12,6 +12,10 @@ import {
   deleteBatchRedemptionCodes,
   deleteUnusedRedemptionCodes,
   updateRedemptionCode,
+  createUser,
+  updateUser,
+  deleteUser,
+  findUserByName,
 } from "@/lib/db";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET || "toctie1234";
@@ -32,6 +36,7 @@ export async function GET(req: NextRequest) {
   const stats = {
     totalUsers: users.length,
     completedUsers: users.filter((u) => u.isComplete).length,
+    usersWithPhone: users.filter((u) => u.phone && u.phone.trim().length > 0).length,
     totalCodes: codes.length,
     usedCodes: codes.filter((c) => c.isUsed).length,
     unusedCodes: codes.filter((c) => !c.isUsed).length,
@@ -59,6 +64,95 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
+
+    // ACTION: Create / Save Customer (Thêm & Lưu thông tin khách hàng mới)
+    if (body.action === "create-user" || body.action === "save-customer") {
+      const rawName = (body.fullName || body.accountName || "").trim();
+      const phone = typeof body.phone === "string" ? body.phone.trim() : "";
+      const note = typeof body.note === "string" ? body.note.trim() : "";
+      const pieceCount = typeof body.initialPieceCount === "number" ? body.initialPieceCount : 0;
+
+      if (!rawName || rawName.length < 2) {
+        return NextResponse.json(
+          { error: "Tên tài khoản khách hàng phải có ít nhất 2 ký tự." },
+          { status: 400 }
+        );
+      }
+
+      const initialPieces = pieceCount > 0 ? Array.from({ length: Math.min(pieceCount, 4) }, (_, i) => i) : [];
+
+      const existing = await findUserByName(rawName);
+      if (existing) {
+        // Cập nhật thông tin nếu tài khoản đã tồn tại
+        const updated = await updateUser(existing.id, {
+          phone: phone || existing.phone,
+          note: note || existing.note,
+          unlockedPieces: pieceCount > 0 ? initialPieces : existing.unlockedPieces,
+        });
+
+        return NextResponse.json({
+          success: true,
+          message: `Khách hàng "${rawName}" đã có trong hệ thống, đã cập nhật thông tin bổ sung.`,
+          user: updated.user,
+          isExisting: true,
+        });
+      }
+
+      const user = await createUser(rawName, "passwordless", phone, note, initialPieces);
+      return NextResponse.json({
+        success: true,
+        message: `Đã lưu thông tin khách hàng "${user.fullName}" thành công vào hệ thống.`,
+        user,
+      });
+    }
+
+    // ACTION: Update Customer Info (Chỉnh sửa thông tin khách hàng)
+    if (body.action === "update-user" || body.action === "edit-customer") {
+      const { userId, fullName, phone, note, pieceCount, unlockedPieces } = body;
+      if (!userId) {
+        return NextResponse.json({ error: "Thiếu userId khách hàng." }, { status: 400 });
+      }
+
+      let piecesToSet: number[] | undefined = undefined;
+      if (Array.isArray(unlockedPieces)) {
+        piecesToSet = unlockedPieces;
+      } else if (typeof pieceCount === "number") {
+        piecesToSet = Array.from({ length: Math.min(Math.max(pieceCount, 0), 4) }, (_, i) => i);
+      }
+
+      const result = await updateUser(userId, {
+        fullName,
+        phone,
+        note,
+        unlockedPieces: piecesToSet,
+      });
+
+      if (!result.success) {
+        return NextResponse.json({ error: result.error }, { status: 400 });
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `Đã cập nhật thông tin khách hàng "${result.user?.fullName}" thành công.`,
+        user: result.user,
+      });
+    }
+
+    // ACTION: Delete Customer Account (Xóa tài khoản khách hàng)
+    if (body.action === "delete-user") {
+      const { userId } = body;
+      if (!userId) {
+        return NextResponse.json({ error: "Thiếu userId." }, { status: 400 });
+      }
+      const result = await deleteUser(userId);
+      if (!result.success) {
+        return NextResponse.json({ error: result.error }, { status: 400 });
+      }
+      return NextResponse.json({
+        success: true,
+        message: "Đã xóa tài khoản khách hàng thành công.",
+      });
+    }
 
     // ACTION: Update / Edit single code
     if (body.action === "update-code" || body.action === "edit-code") {

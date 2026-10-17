@@ -5,6 +5,8 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const rawName = body.accountName || body.fullName || "";
+    const rawPhone = typeof body.phone === "string" ? body.phone.trim() : "";
+    const rawNote = typeof body.note === "string" ? body.note.trim() : "";
     const action = body.action || "login";
 
     if (!rawName || typeof rawName !== "string" || !rawName.trim()) {
@@ -30,7 +32,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // Đăng ký tài khoản mới (khách hàng tự đặt tên tài khoản riêng)
+    // Đăng ký tài khoản mới (khách hàng tự đặt tên tài khoản riêng & lưu thông tin)
     if (action === "register") {
       const existing = await findUserByName(name);
       if (existing) {
@@ -43,7 +45,7 @@ export async function POST(req: Request) {
         );
       }
 
-      const user = await createUser(name, "passwordless");
+      const user = await createUser(name, "passwordless", rawPhone, rawNote);
 
       return NextResponse.json({
         success: true,
@@ -51,6 +53,8 @@ export async function POST(req: Request) {
         user: {
           id: user.id,
           fullName: user.fullName,
+          phone: user.phone,
+          note: user.note,
           unlockedPieces: user.unlockedPieces,
           redeemedCodes: user.redeemedCodes,
         },
@@ -75,6 +79,8 @@ export async function POST(req: Request) {
         user: {
           id: user.id,
           fullName: user.fullName,
+          phone: user.phone,
+          note: user.note,
           unlockedPieces: user.unlockedPieces,
           redeemedCodes: user.redeemedCodes,
         },
@@ -86,7 +92,7 @@ export async function POST(req: Request) {
       let user = await findUserByName(name);
       let isNew = false;
       if (!user) {
-        user = await createUser(name, "passwordless");
+        user = await createUser(name, "passwordless", rawPhone, rawNote);
         isNew = true;
       }
 
@@ -96,6 +102,8 @@ export async function POST(req: Request) {
         user: {
           id: user.id,
           fullName: user.fullName,
+          phone: user.phone,
+          note: user.note,
           unlockedPieces: user.unlockedPieces,
           redeemedCodes: user.redeemedCodes,
         },
