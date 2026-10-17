@@ -308,7 +308,7 @@ export async function getRedemptionCode(code: string): Promise<RedemptionCode | 
     const { data, error } = await supabaseAdmin
       .from("redemption_codes")
       .select("*")
-      .eq("code", normalized)
+      .ilike("code", normalized)
       .maybeSingle();
 
     if (!error && data) {
@@ -366,7 +366,7 @@ export async function redeemCode(
           used_by: user.fullName,
           used_at: now,
         })
-        .eq("code", normalized),
+        .ilike("code", normalized),
       supabaseAdmin
         .from("users")
         .update({

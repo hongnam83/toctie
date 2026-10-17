@@ -43,26 +43,26 @@ const BUCKET_NAME = "toctie-store";
 const FILE_NAME = "store.json";
 
 const DEFAULT_DEMO_CODES = [
-  "TOCTIE-2010-AAAA",
-  "TOCTIE-2010-BBBB",
-  "TOCTIE-2010-CCCC",
-  "TOCTIE-2010-DDDD",
-  "TOCTIE-2010-EEEE",
-  "TOCTIE-2010-FFFF",
-  "TOCTIE-2010-GGGG",
-  "TOCTIE-2010-HHHH",
-  "TOCTIE-2010-IIII",
-  "TOCTIE-2010-JJJJ",
-  "TOCTIE-2010-KKKK",
-  "TOCTIE-2010-LLLL",
-  "TOCTIE-2010-MMMM",
-  "TOCTIE-2010-NNNN",
-  "TOCTIE-2010-OOOO",
-  "TOCTIE-2010-PPPP",
-  "TOCTIE-2010-QQQQ",
-  "TOCTIE-2010-RRRR",
-  "TOCTIE-2010-SSSS",
-  "TOCTIE-2010-TTTT",
+  "toctie-K7M9X",
+  "toctie-P4N8Q",
+  "toctie-R6T2W",
+  "toctie-H9B5Y",
+  "toctie-X3D7K",
+  "toctie-M8F2P",
+  "toctie-Q5L9R",
+  "toctie-T7C4N",
+  "toctie-B2W6H",
+  "toctie-Y9K3F",
+  "toctie-N4X8D",
+  "toctie-F6P2M",
+  "toctie-W3R7L",
+  "toctie-D8H5T",
+  "toctie-L2Q9B",
+  "toctie-C7Y4X",
+  "toctie-G5N8P",
+  "toctie-V9M3K",
+  "toctie-J4T6R",
+  "toctie-Z8F2W",
 ];
 
 function ensureDir(dir: string) {
@@ -260,7 +260,7 @@ function initStore(): StoreState {
   if (codesMap.size === 0) {
     DEFAULT_DEMO_CODES.forEach((code) => {
       codesMap.set(code.toUpperCase(), {
-        code: code.toUpperCase(),
+        code: code,
         isUsed: false,
       });
     });
