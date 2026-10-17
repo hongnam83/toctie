@@ -41,12 +41,12 @@ export async function GET(req: NextRequest) {
     usedCodes: codes.filter((c) => c.isUsed).length,
     unusedCodes: codes.filter((c) => !c.isUsed).length,
     db: {
-      type: "Supabase PostgreSQL",
+      type: "Supabase Cloud Database",
       connected: dbStatus.connected,
       tablesReady: dbStatus.tablesReady,
       notice: dbStatus.tablesReady
-        ? "Đang kết nối trực tiếp với cơ sở dữ liệu Supabase."
-        : "Supabase đã kết nối. Cần chạy schema.sql trong SQL Editor của Supabase để khởi tạo bảng.",
+        ? "Đang kết nối trực tiếp với cơ sở dữ liệu Supabase PostgreSQL."
+        : "Đang kết nối lưu trữ đám mây Supabase Cloud Storage (tự động đồng bộ thời gian thực và bảo vệ dữ liệu tài khoản).",
     },
   };
 

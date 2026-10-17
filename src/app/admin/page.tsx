@@ -107,7 +107,7 @@ export default function AdminPage() {
 
   // User search & filters
   const [userSearch, setUserSearch] = useState("");
-  const [userFilter, setUserFilter] = useState<"all" | "completed" | "in_progress" | "has_phone">("all");
+  const [userFilter, setUserFilter] = useState<"all" | "completed" | "in_progress" | "no_codes" | "has_phone">("all");
   const [userNoticeMsg, setUserNoticeMsg] = useState("");
 
   // User Edit & Manage modal
@@ -598,7 +598,8 @@ export default function AdminPage() {
 
   const filteredUsers = users.filter((u) => {
     if (userFilter === "completed" && !u.isComplete) return false;
-    if (userFilter === "in_progress" && u.isComplete) return false;
+    if (userFilter === "in_progress" && (u.isComplete || u.pieceCount === 0)) return false;
+    if (userFilter === "no_codes" && u.pieceCount !== 0) return false;
     if (userFilter === "has_phone" && (!u.phone || !u.phone.trim())) return false;
 
     if (userSearch.trim()) {
@@ -965,6 +966,14 @@ export default function AdminPage() {
                   <strong>{users.length} tài khoản</strong>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span>Chưa nhập mã (0/4):</span>
+                  <strong style={{ color: "var(--navy)" }}>{users.filter((u) => u.pieceCount === 0).length}</strong>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span>Đang gom mảnh ghép:</span>
+                  <strong>{users.filter((u) => u.pieceCount > 0 && !u.isComplete).length}</strong>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <span>Khách có số điện thoại:</span>
                   <strong>{users.filter((u) => u.phone && u.phone.trim()).length}</strong>
                 </div>
@@ -1020,8 +1029,9 @@ export default function AdminPage() {
                   <div className={styles.filterTabs}>
                     {[
                       { key: "all", label: `Tất cả (${users.length})` },
+                      { key: "no_codes", label: `Chưa nhập mã (${users.filter((u) => u.pieceCount === 0).length})` },
+                      { key: "in_progress", label: `Đang gom (${users.filter((u) => u.pieceCount > 0 && !u.isComplete).length})` },
                       { key: "completed", label: `Đủ 4 mảnh (${users.filter((u) => u.isComplete).length})` },
-                      { key: "in_progress", label: `Đang gom (${users.filter((u) => !u.isComplete).length})` },
                       { key: "has_phone", label: `Có SĐT (${users.filter((u) => u.phone && u.phone.trim()).length})` },
                     ].map((f) => (
                       <button
@@ -1133,9 +1143,11 @@ export default function AdminPage() {
                             <td>
                               {u.isComplete ? (
                                 <span className={styles.badgeComplete}>Hoàn thành</span>
+                              ) : u.pieceCount === 0 ? (
+                                <span className={styles.badgeUnused}>Chưa nhập mã (0/4)</span>
                               ) : (
                                 <span className={styles.badgeInProgress}>
-                                  {u.pieceCount}/4 mảnh
+                                  Đang gom ({u.pieceCount}/4)
                                 </span>
                               )}
                             </td>

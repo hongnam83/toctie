@@ -32,19 +32,27 @@ export async function POST(req: Request) {
       );
     }
 
-    // Đăng ký tài khoản mới (khách hàng tự đặt tên tài khoản riêng & lưu thông tin)
+    // Đăng ký tài khoản mới (khách hàng tự đặt tên tài khoản riêng & lưu thông tin tự động)
     if (action === "register") {
       const existing = await findUserByName(name);
       if (existing) {
-        return NextResponse.json(
-          {
-            error: `Tài khoản "${existing.fullName}" đã tồn tại trên hệ thống.`,
-            exists: true,
+        // Tài khoản đã tồn tại, tự động đăng nhập người dùng an toàn
+        return NextResponse.json({
+          success: true,
+          isNew: false,
+          alreadyExisted: true,
+          user: {
+            id: existing.id,
+            fullName: existing.fullName,
+            phone: existing.phone,
+            note: existing.note,
+            unlockedPieces: existing.unlockedPieces,
+            redeemedCodes: existing.redeemedCodes,
           },
-          { status: 409 }
-        );
+        });
       }
 
+      // Tạo tài khoản mới và lưu trữ bền vững ngay lập tức
       const user = await createUser(name, "passwordless", rawPhone, rawNote);
 
       return NextResponse.json({

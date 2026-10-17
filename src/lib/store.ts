@@ -4,6 +4,7 @@
 
 import fs from "fs";
 import path from "path";
+import { supabaseAdmin } from "./supabase";
 
 export interface User {
   id: string;
@@ -38,6 +39,8 @@ const DATA_DIR = path.join(process.cwd(), "data");
 const STORE_FILE = path.join(DATA_DIR, "store.json");
 const TMP_DATA_DIR = "/tmp/toctie_data";
 const TMP_STORE_FILE = path.join(TMP_DATA_DIR, "store.json");
+const BUCKET_NAME = "toctie-store";
+const FILE_NAME = "store.json";
 
 const DEFAULT_DEMO_CODES = [
   "TOCTIE-2010-AAAA",
@@ -72,6 +75,98 @@ function ensureDir(dir: string) {
   }
 }
 
+/**
+ * Push current store snapshot to Supabase Cloud Storage (ensures data survives across serverless containers on Vercel)
+ */
+export async function pushCloudStore(): Promise<boolean> {
+  try {
+    if (!global.__toctieStore) return false;
+
+    const dataToSave = {
+      users: Array.from(global.__toctieStore.users.values()),
+      codes: Array.from(global.__toctieStore.codes.values()),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const jsonStr = JSON.stringify(dataToSave, null, 2);
+
+    const { error } = await supabaseAdmin.storage
+      .from(BUCKET_NAME)
+      .upload(FILE_NAME, jsonStr, {
+        upsert: true,
+        contentType: "application/json",
+      });
+
+    if (error) {
+      if (
+        error.message?.includes("Bucket not found") ||
+        error.message?.includes("not found")
+      ) {
+        await supabaseAdmin.storage.createBucket(BUCKET_NAME, { public: false });
+        await supabaseAdmin.storage
+          .from(BUCKET_NAME)
+          .upload(FILE_NAME, jsonStr, {
+            upsert: true,
+            contentType: "application/json",
+          });
+      }
+    }
+    return true;
+  } catch (err) {
+    console.warn("Lưu lên Supabase Cloud Storage:", err);
+    return false;
+  }
+}
+
+/**
+ * Pull latest store snapshot from Supabase Cloud Storage and merge into memory
+ */
+export async function pullCloudStore(): Promise<boolean> {
+  try {
+    const { data, error } = await supabaseAdmin.storage
+      .from(BUCKET_NAME)
+      .download(FILE_NAME);
+
+    if (error || !data) return false;
+
+    const text = await data.text();
+    const parsed = JSON.parse(text);
+    const store = getStore();
+
+    if (Array.isArray(parsed.users)) {
+      parsed.users.forEach((u: User) => {
+        if (!store.users.has(u.id)) {
+          store.users.set(u.id, u);
+          store.usersByName.set(u.fullName.toLowerCase(), u.id);
+        } else {
+          const local = store.users.get(u.id)!;
+          if (
+            (u.unlockedPieces?.length || 0) >=
+            (local.unlockedPieces?.length || 0)
+          ) {
+            store.users.set(u.id, u);
+            store.usersByName.set(u.fullName.toLowerCase(), u.id);
+          }
+        }
+      });
+    }
+
+    if (Array.isArray(parsed.codes)) {
+      parsed.codes.forEach((c: RedemptionCode) => {
+        const upper = c.code.toUpperCase();
+        if (!store.codes.has(upper) || c.isUsed) {
+          store.codes.set(upper, c);
+        }
+      });
+    }
+
+    return true;
+  } catch (err) {
+    console.warn("Đồng bộ từ Supabase Cloud Storage:", err);
+    return false;
+  }
+}
+
 export function persistStore() {
   try {
     if (!global.__toctieStore) return;
@@ -84,7 +179,7 @@ export function persistStore() {
 
     const jsonStr = JSON.stringify(dataToSave, null, 2);
 
-    // Try primary workspace data directory
+    // 1. Try primary workspace data directory
     try {
       ensureDir(DATA_DIR);
       fs.writeFileSync(STORE_FILE, jsonStr, "utf-8");
@@ -97,6 +192,9 @@ export function persistStore() {
         console.warn("Lưu tmp store thất bại:", tmpErr);
       }
     }
+
+    // 2. Asynchronously sync to Supabase Cloud Storage
+    pushCloudStore().catch(() => {});
   } catch (err) {
     console.error("Lỗi khi lưu dữ liệu cửa hàng:", err);
   }

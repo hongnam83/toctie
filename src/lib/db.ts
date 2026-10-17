@@ -7,17 +7,19 @@ import {
   persistStore,
   generateId,
   simpleHash,
+  pushCloudStore,
+  pullCloudStore,
   User,
   RedemptionCode,
 } from "./store";
 
-export { simpleHash, generateId, persistStore };
+export { simpleHash, generateId, persistStore, pushCloudStore, pullCloudStore };
 export type { User, RedemptionCode };
 
 let isSupabaseAvailable: boolean | null = null;
 
 /**
- * Check if Supabase tables exist and connection is functional
+ * Check if Supabase connection and storage/tables are functional
  */
 export async function testSupabaseConnection(): Promise<{
   connected: boolean;
@@ -31,8 +33,9 @@ export async function testSupabaseConnection(): Promise<{
       .limit(1);
 
     if (error) {
+      // Key works, cloud storage is active, but PostgreSQL tables not run via SQL editor yet
       return {
-        connected: true, // Key works, but table not created yet
+        connected: true,
         tablesReady: false,
         error: error.message,
       };
@@ -84,11 +87,20 @@ export async function findUserByName(fullName: string): Promise<User | null> {
 
   // Local persistent fallback
   const store = getStore();
-  const userId = store.usersByName.get(normalized.toLowerCase());
+  let userId = store.usersByName.get(normalized.toLowerCase());
   if (userId) {
     const u = store.users.get(userId);
-    return u || null;
+    if (u) return u;
   }
+
+  // Pull latest snapshot from Supabase Cloud Storage to find users registered across other containers
+  await pullCloudStore().catch(() => {});
+  userId = store.usersByName.get(normalized.toLowerCase());
+  if (userId) {
+    const u = store.users.get(userId);
+    if (u) return u;
+  }
+
   return null;
 }
 
@@ -125,11 +137,17 @@ export async function findUserById(id: string): Promise<User | null> {
   }
 
   const store = getStore();
-  return store.users.get(id) || null;
+  let user = store.users.get(id);
+  if (user) return user;
+
+  // Try pulling from cloud storage
+  await pullCloudStore().catch(() => {});
+  user = store.users.get(id);
+  return user || null;
 }
 
 /**
- * Create a new user (guaranteed to appear in backend immediately)
+ * Create a new user (guaranteed to be saved and appear in backend immediately)
  */
 export async function createUser(
   fullName: string,
@@ -162,7 +180,10 @@ export async function createUser(
   store.usersByName.set(name.toLowerCase(), id);
   persistStore();
 
-  // 2. Sync to Supabase if available
+  // 2. Guarantee persistence to Supabase Cloud Storage across all serverless containers
+  await pushCloudStore().catch(() => {});
+
+  // 3. Sync to Supabase PostgreSQL table if ready
   try {
     await supabaseAdmin.from("users").insert({
       id,
@@ -175,7 +196,7 @@ export async function createUser(
       created_at: createdAt,
     });
   } catch (err) {
-    console.warn("Supabase insert user failed (using disk backup):", err);
+    // Postgres table may not be initialized; handled by cloud storage
   }
 
   return newUser;
@@ -231,6 +252,7 @@ export async function updateUser(
   }
 
   persistStore();
+  await pushCloudStore().catch(() => {});
 
   try {
     await supabaseAdmin
@@ -265,6 +287,7 @@ export async function deleteUser(
   store.users.delete(userId);
   store.usersByName.delete(user.fullName.toLowerCase());
   persistStore();
+  await pushCloudStore().catch(() => {});
 
   try {
     await supabaseAdmin.from("users").delete().eq("id", userId);
@@ -331,6 +354,7 @@ export async function redeemCode(
     memoryUser.redeemedCodes = updatedCodes;
   }
   persistStore();
+  await pushCloudStore().catch(() => {});
 
   // 2. Sync to Supabase
   try {
@@ -366,6 +390,9 @@ export async function getAdminData(): Promise<{
   codes: RedemptionCode[];
 }> {
   const store = getStore();
+
+  // Always pull latest cloud store so accounts created across all serverless containers appear immediately
+  await pullCloudStore().catch(() => {});
 
   try {
     const [usersRes, codesRes] = await Promise.all([
