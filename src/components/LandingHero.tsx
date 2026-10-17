@@ -160,45 +160,43 @@ export default function LandingHero({ onOpenAuth }: Props) {
 
               {/* 2x2 preview of the authentic puzzle */}
               <div className={styles.teaserGrid}>
-                {/* Piece 0: Scrunchie */}
+                {/* Piece 0 */}
                 <div className={`${styles.teaserPiece} ${styles.teaserPiece0}`}>
                   <div className={styles.pieceTeaserContent}>
                     <div className={styles.pieceIconSvgBox}>
                       {/* Bespoke Scrunchie SVG */}
-                      <svg width="34" height="34" viewBox="0 0 40 40" fill="none">
+                      <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
                         <circle cx="20" cy="20" r="14" stroke="#1E2D6B" strokeWidth="2.5" fill="#F4C5D3" />
                         <circle cx="20" cy="20" r="6" stroke="#1E2D6B" strokeWidth="2" fill="#FAF6EE" />
                         <path d="M14 8C17 11 23 11 26 8M32 14C29 17 29 23 32 26M26 32C23 29 17 29 14 32M8 26C11 23 11 17 8 14" stroke="#1E2D6B" strokeWidth="2" strokeLinecap="round" />
                       </svg>
                     </div>
-                    <span className={styles.pieceName}>Scrunchie lụa</span>
                     <span className={styles.pieceLockBadge}>Góc 01</span>
                   </div>
                 </div>
 
-                {/* Piece 1: Pocket Mirror */}
+                {/* Piece 1 */}
                 <div className={`${styles.teaserPiece} ${styles.teaserPiece1}`}>
                   <div className={styles.pieceTeaserContent}>
                     <div className={styles.pieceIconSvgBox}>
                       {/* Bespoke Pocket Mirror SVG */}
-                      <svg width="34" height="34" viewBox="0 0 40 40" fill="none">
+                      <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
                         <circle cx="20" cy="18" r="11" stroke="#1E2D6B" strokeWidth="2.5" fill="#B8CCE4" />
                         <circle cx="20" cy="18" r="7.5" fill="#FAF6EE" stroke="#1E2D6B" strokeWidth="1.5" />
                         <path d="M20 29L20 36M17 36H23" stroke="#1E2D6B" strokeWidth="2.5" strokeLinecap="round" />
                         <path d="M17 15L23 21" stroke="#1E2D6B" strokeWidth="1.5" strokeLinecap="round" strokeOpacity="0.4" />
                       </svg>
                     </div>
-                    <span className={styles.pieceName}>Gương hoa xinh</span>
                     <span className={styles.pieceLockBadge}>Góc 02</span>
                   </div>
                 </div>
 
-                {/* Piece 2: Radiant Star */}
+                {/* Piece 2 */}
                 <div className={`${styles.teaserPiece} ${styles.teaserPiece2}`}>
                   <div className={styles.pieceTeaserContent}>
                     <div className={styles.pieceIconSvgBox}>
                       {/* Bespoke Radiant Star SVG */}
-                      <svg width="34" height="34" viewBox="0 0 40 40" fill="none">
+                      <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
                         <path
                           d="M20 4L22.5 15L33.5 17.5L22.5 20L20 31L17.5 20L6.5 17.5L17.5 15Z"
                           fill="#FFE066"
@@ -209,24 +207,22 @@ export default function LandingHero({ onOpenAuth }: Props) {
                         <circle cx="20" cy="17.5" r="3" fill="#FAF6EE" stroke="#1E2D6B" strokeWidth="1.5" />
                       </svg>
                     </div>
-                    <span className={styles.pieceName}>Ánh sao sáng</span>
                     <span className={styles.pieceLockBadge}>Góc 03</span>
                   </div>
                 </div>
 
-                {/* Piece 3: Love Gift Box */}
+                {/* Piece 3 */}
                 <div className={`${styles.teaserPiece} ${styles.teaserPiece3}`}>
                   <div className={styles.pieceTeaserContent}>
                     <div className={styles.pieceIconSvgBox}>
                       {/* Bespoke Gift Box SVG */}
-                      <svg width="34" height="34" viewBox="0 0 40 40" fill="none">
+                      <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
                         <rect x="9" y="15" width="22" height="18" rx="3" fill="#F4C5D3" stroke="#1E2D6B" strokeWidth="2.5" />
                         <rect x="7" y="11" width="26" height="5" rx="1.5" fill="#FFE066" stroke="#1E2D6B" strokeWidth="2" />
                         <line x1="20" y1="11" x2="20" y2="33" stroke="#1E2D6B" strokeWidth="2" />
                         <path d="M20 11C18 7 13 7 15 11ZM20 11C22 7 27 7 25 11Z" fill="#FAF6EE" stroke="#1E2D6B" strokeWidth="2" />
                       </svg>
                     </div>
-                    <span className={styles.pieceName}>Hộp quà 20/10</span>
                     <span className={styles.pieceLockBadge}>Góc 04</span>
                   </div>
                 </div>

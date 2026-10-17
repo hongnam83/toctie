@@ -7,29 +7,29 @@ import styles from "./PuzzleGrid.module.css";
 export const PIECE_INFO = [
   {
     id: 0,
-    name: "Trái tim",
-    subtitle: "Scrunchie lụa thắt nơ",
+    name: "Mảnh 1",
+    subtitle: "Góc 01",
     color: "#F4C5D3",
     tag: "Góc 1",
   },
   {
     id: 1,
-    name: "Nụ cười",
-    subtitle: "Gương mini hoa xinh",
+    name: "Mảnh 2",
+    subtitle: "Góc 02",
     color: "#B8CCE4",
     tag: "Góc 2",
   },
   {
     id: 2,
-    name: "Ánh sao",
-    subtitle: "Ruy băng & ánh sao",
+    name: "Mảnh 3",
+    subtitle: "Góc 03",
     color: "#FFF3C4",
     tag: "Góc 3",
   },
   {
     id: 3,
-    name: "Hạnh phúc",
-    subtitle: "Hộp quà 20/10 yêu thương",
+    name: "Mảnh 4",
+    subtitle: "Góc 04",
     color: "#C8EDDD",
     tag: "Góc 4",
   },
@@ -101,10 +101,6 @@ function PieceArtwork({ pieceIndex }: { pieceIndex: number }) {
           <path d="M-40,-55 L-37,-45 L-27,-42 L-37,-39 L-40,-29 L-43,-39 L-53,-42 L-43,-45 Z" fill="#FFE066" stroke="#1E2D6B" strokeWidth="1" />
           <path d="M48,40 L50,46 L56,48 L50,50 L48,56 L46,50 L40,48 L46,46 Z" fill="#FFE066" stroke="#1E2D6B" strokeWidth="0.8" />
         </g>
-
-        <text x="100" y="185" textAnchor="middle" fontFamily="'Shantell Sans', cursive" fontSize="11" fontWeight="700" fill="#1E2D6B">
-          Scrunchie Lụa
-        </text>
       </svg>
     );
   }
@@ -165,10 +161,6 @@ function PieceArtwork({ pieceIndex }: { pieceIndex: number }) {
           <path d="M-55,-40 L-53,-32 L-45,-30 L-53,-28 L-55,-20 L-57,-28 L-65,-30 L-57,-32 Z" fill="#FFE066" stroke="#1E2D6B" strokeWidth="1" />
           <circle cx="55" cy="-45" r="4" fill="#F4C5D3" stroke="#1E2D6B" strokeWidth="1.2" />
         </g>
-
-        <text x="100" y="185" textAnchor="middle" fontFamily="'Shantell Sans', cursive" fontSize="11" fontWeight="700" fill="#1E2D6B">
-          Gương Hoa Cúc Mini
-        </text>
       </svg>
     );
   }
@@ -219,10 +211,6 @@ function PieceArtwork({ pieceIndex }: { pieceIndex: number }) {
             <circle cx="0" cy="0" r="4" fill="#1E2D6B" />
           </g>
         </g>
-
-        <text x="100" y="185" textAnchor="middle" fontFamily="'Shantell Sans', cursive" fontSize="11" fontWeight="700" fill="#1E2D6B">
-          Ruy Băng & Ánh Sao
-        </text>
       </svg>
     );
   }
@@ -269,10 +257,6 @@ function PieceArtwork({ pieceIndex }: { pieceIndex: number }) {
         <circle cx="-56" cy="10" r="3" fill="#FFE066" stroke="#1E2D6B" strokeWidth="1" />
         <path d="M52,-45 L54,-38 L61,-36 L54,-34 L52,-27 L50,-34 L43,-36 L50,-38 Z" fill="#FFE066" stroke="#1E2D6B" strokeWidth="0.8" />
       </g>
-
-      <text x="100" y="185" textAnchor="middle" fontFamily="'Shantell Sans', cursive" fontSize="11" fontWeight="700" fill="#1E2D6B">
-        Hộp Quà Tặng 20/10
-      </text>
     </svg>
   );
 }
@@ -374,8 +358,7 @@ export default function PuzzleGrid({ unlockedPieces, newlyRevealedPiece }: Props
 
                     {/* Subtle info pill visible on hover */}
                     <div className={styles.pieceOverlay}>
-                      <strong className={styles.pieceOverlayName}>Mảnh {pieceIndex + 1}: {info.name}</strong>
-                      <span className={styles.pieceOverlaySub}>{info.subtitle}</span>
+                      <strong className={styles.pieceOverlayName}>Mảnh {pieceIndex + 1}</strong>
                     </div>
                   </div>
                 ) : (
