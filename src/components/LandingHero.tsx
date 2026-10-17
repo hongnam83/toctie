@@ -215,10 +215,19 @@ export default function LandingHero({ onOpenAuth }: Props) {
 
       {/* ── Hero Section ── */}
       <div className={styles.heroWrapper} id="trang-chu">
+        {/* Soft atmospheric gradient glows */}
+        <div className={styles.heroGlowBlob1} aria-hidden="true" />
+        <div className={styles.heroGlowBlob2} aria-hidden="true" />
+
         <section className={styles.heroSection}>
           <div className={styles.heroContainer}>
           {/* Left Column: Headlines & Call to Action */}
           <div className={styles.heroContent}>
+            <div className={styles.campaignBadge}>
+              <span className={styles.badgePulseDot} />
+              <span>Sự kiện đặc biệt 20/10 • Ngày Phụ Nữ Việt Nam</span>
+            </div>
+
             <h1 className={styles.mainHeadline}>
               Mảnh ghép
               <br />
@@ -253,21 +262,69 @@ export default function LandingHero({ onOpenAuth }: Props) {
 
             {/* Main Action Area */}
             <div className={styles.ctaGroup}>
-              <button
-                className={`btn btn-primary btn-lg ${styles.mainCtaBtn}`}
-                onClick={onOpenAuth}
-                id="cta-start"
-              >
-                <span>Bắt đầu thu thập ngay</span>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
-                  <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
+              <div className={styles.ctaRow}>
+                <button
+                  className={`btn btn-primary btn-lg ${styles.mainCtaBtn}`}
+                  onClick={onOpenAuth}
+                  id="cta-start"
+                >
+                  <span>Bắt đầu thu thập ngay</span>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                    <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+                <button
+                  className={`btn ${styles.secondaryCtaBtn}`}
+                  onClick={() => handleNavClick("hanh-trinh")}
+                  type="button"
+                >
+                  <span>Xem thể lệ & quà tặng</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <path d="M19 9l-7 7-7-7" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Social Proof & Trust Bar */}
+              <div className={styles.heroTrustBar}>
+                <div className={styles.trustItem}>
+                  <span className={styles.trustIcon}>🎁</span>
+                  <div className={styles.trustText}>
+                    <strong>100% Nhận quà</strong>
+                    <span>Khi gom đủ 4 góc tranh</span>
+                  </div>
+                </div>
+                <div className={styles.trustDivider} />
+                <div className={styles.trustItem}>
+                  <span className={styles.trustIcon}>🎀</span>
+                  <div className={styles.trustText}>
+                    <strong>tóc.tie Authentic</strong>
+                    <span>Phụ kiện lụa bồng bềnh</span>
+                  </div>
+                </div>
+                <div className={styles.trustDivider} />
+                <div className={styles.trustItem}>
+                  <span className={styles.trustIcon}>⚡</span>
+                  <div className={styles.trustText}>
+                    <strong>Mở góc tức thì</strong>
+                    <span>Nhập mã dự thưởng</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
           {/* Right Column: Interlocking Puzzle Box Teaser */}
           <div className={styles.heroVisualCol}>
+            {/* Floating Top Feature Badge */}
+            <div className={styles.floatingTeaserBadgeTop}>
+              <span className={styles.floatingBadgeIcon}>🌸</span>
+              <div className={styles.floatingBadgeContent}>
+                <strong>Set quà tri ân 20/10</strong>
+                <span>Kèm thiệp chúc viết tay</span>
+              </div>
+            </div>
+
             <div className={styles.puzzleTeaserCard}>
               {/* Badge top of board */}
               <div className={styles.teaserHeader}>
@@ -378,6 +435,15 @@ export default function LandingHero({ onOpenAuth }: Props) {
                     <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </button>
+              </div>
+            </div>
+
+            {/* Floating Bottom Feature Badge */}
+            <div className={styles.floatingTeaserBadgeBottom}>
+              <span className={styles.floatingBadgeIcon}>✨</span>
+              <div className={styles.floatingBadgeContent}>
+                <strong>Mở 4 góc = 1 phần quà</strong>
+                <span>Tri ân độc quyền từ tóc.tie</span>
               </div>
             </div>
 
