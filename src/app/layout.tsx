@@ -6,7 +6,8 @@ export const metadata: Metadata = {
   description:
     "Chương trình loyalty đặc biệt từ tóc.tie. Thu thập 4 mảnh ghép để nhận phần thưởng bí ẩn dành cho người đặc biệt của bạn.",
   icons: {
-    icon: "/favicon.ico",
+    icon: "/toctie-logo.jpg",
+    apple: "/toctie-logo.jpg",
   },
 };
 
