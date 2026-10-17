@@ -8,7 +8,6 @@ const ADMIN_SECRET = "toctie1234";
 interface AdminStats {
   totalUsers: number;
   completedUsers: number;
-  usersWithPhone?: number;
   totalCodes: number;
   usedCodes: number;
   unusedCodes: number;
@@ -1390,11 +1389,6 @@ export default function AdminPage() {
                 <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>
                   Mã ID: <code>{modalUser.id}</code> · Tiến trình: <strong>{modalUser.pieceCount}/4 mảnh</strong>
                 </div>
-                {modalUser.phone && (
-                  <div style={{ fontSize: "12px", color: "#166534", marginTop: "2px", fontWeight: 600 }}>
-                    Số điện thoại: {modalUser.phone}
-                  </div>
-                )}
                 <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
                   Mã đã nhập: {modalUser.redeemedCodes.length > 0 ? modalUser.redeemedCodes.join(", ") : "Chưa nhập mã nào"}
                 </div>
@@ -1413,15 +1407,6 @@ export default function AdminPage() {
                   >
                     Sao chép tên
                   </button>
-                  {modalUser.phone && (
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-sm"
-                      onClick={() => copyToClipboard(modalUser.phone!, "số điện thoại")}
-                    >
-                      Sao chép SĐT
-                    </button>
-                  )}
                   <button
                     type="button"
                     className="btn btn-secondary btn-sm"

@@ -36,7 +36,6 @@ export async function GET(req: NextRequest) {
   const stats = {
     totalUsers: users.length,
     completedUsers: users.filter((u) => u.isComplete).length,
-    usersWithPhone: users.filter((u) => u.phone && u.phone.trim().length > 0).length,
     totalCodes: codes.length,
     usedCodes: codes.filter((c) => c.isUsed).length,
     unusedCodes: codes.filter((c) => !c.isUsed).length,
