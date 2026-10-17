@@ -63,6 +63,15 @@ export default function AdminPage() {
   const [deleteMsg, setDeleteMsg] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  // Code edit modal states
+  const [modalEditCode, setModalEditCode] = useState<AdminCode | null>(null);
+  const [editCodeString, setEditCodeString] = useState("");
+  const [editCodeIsUsed, setEditCodeIsUsed] = useState(false);
+  const [editCodeUsedBy, setEditCodeUsedBy] = useState("");
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState("");
+  const [editSuccess, setEditSuccess] = useState("");
+
   const fetchData = useCallback(async (s: string) => {
     setLoading(true);
     setError("");
@@ -234,6 +243,97 @@ export default function AdminPage() {
     } else {
       const combined = Array.from(new Set([...selectedCodes, ...visibleCodes]));
       setSelectedCodes(combined);
+    }
+  };
+
+  const handleOpenEditModal = (c: AdminCode) => {
+    setModalEditCode(c);
+    setEditCodeString(c.code);
+    setEditCodeIsUsed(c.isUsed);
+    setEditCodeUsedBy(c.usedBy || "");
+    setEditError("");
+    setEditSuccess("");
+  };
+
+  const handleCloseEditModal = () => {
+    setModalEditCode(null);
+    setEditError("");
+    setEditSuccess("");
+  };
+
+  const handleSaveEditCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!modalEditCode) return;
+
+    const trimmedCode = editCodeString.trim().toUpperCase();
+    if (!trimmedCode || trimmedCode.length < 3) {
+      setEditError("Mã dự thưởng phải có ít nhất 3 ký tự.");
+      return;
+    }
+
+    setEditLoading(true);
+    setEditError("");
+    setEditSuccess("");
+
+    try {
+      const res = await fetch(`/api/admin?secret=${secret}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update-code",
+          code: modalEditCode.code,
+          newCode: trimmedCode,
+          isUsed: editCodeIsUsed,
+          usedBy: editCodeIsUsed ? editCodeUsedBy.trim() : null,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setEditError(data.error || "Không thể cập nhật mã.");
+        return;
+      }
+
+      setEditSuccess(`Đã cập nhật mã "${data.code?.code || trimmedCode}" thành công!`);
+      setModalEditCode(data.code);
+      fetchData(secret);
+      setTimeout(() => {
+        handleCloseEditModal();
+      }, 1000);
+    } catch {
+      setEditError("Lỗi kết nối khi cập nhật mã.");
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleBatchMarkStatus = async (isUsed: boolean) => {
+    if (selectedCodes.length === 0) return;
+    setDeleteLoading(true);
+    setDeleteMsg("");
+    try {
+      let count = 0;
+      for (const code of selectedCodes) {
+        const res = await fetch(`/api/admin?secret=${secret}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "update-code",
+            code,
+            isUsed,
+            usedBy: isUsed ? "Admin thủ công" : null,
+          }),
+        });
+        if (res.ok) count++;
+      }
+      setDeleteMsg(`Đã cập nhật trạng thái cho ${count} mã đã chọn.`);
+      setSelectedCodes([]);
+      setTimeout(() => setDeleteMsg(""), 4000);
+      fetchData(secret);
+    } catch {
+      setDeleteMsg("Lỗi khi cập nhật trạng thái hàng loạt.");
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -778,6 +878,24 @@ export default function AdminPage() {
                   <div className={styles.batchToolbarActions}>
                     <button
                       type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => handleBatchMarkStatus(false)}
+                      disabled={deleteLoading}
+                      title="Chuyển tất cả mã đã chọn về trạng thái Chưa dùng"
+                    >
+                      Đặt Chưa dùng
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => handleBatchMarkStatus(true)}
+                      disabled={deleteLoading}
+                      title="Chuyển tất cả mã đã chọn sang trạng thái Đã dùng"
+                    >
+                      Đặt Đã dùng
+                    </button>
+                    <button
+                      type="button"
                       className={styles.btnDanger}
                       onClick={handleDeleteSelectedCodes}
                       disabled={deleteLoading}
@@ -868,15 +986,33 @@ export default function AdminPage() {
                               : "—"}
                           </td>
                           <td>
-                            <button
-                              type="button"
-                              className={styles.btnDelete}
-                              onClick={() => handleDeleteSingleCode(c.code)}
-                              disabled={deleteLoading}
-                              title="Xóa mã này khỏi hệ thống"
-                            >
-                              Xóa
-                            </button>
+                            <div className={styles.tableRowActions}>
+                              <button
+                                type="button"
+                                className={styles.btnEdit}
+                                onClick={() => handleOpenEditModal(c)}
+                                title="Chỉnh sửa mã này"
+                              >
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                </svg>
+                                Sửa
+                              </button>
+                              <button
+                                type="button"
+                                className={styles.btnDelete}
+                                onClick={() => handleDeleteSingleCode(c.code)}
+                                disabled={deleteLoading}
+                                title="Xóa mã này khỏi hệ thống"
+                              >
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="3 6 5 6 21 6" />
+                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                </svg>
+                                Xóa
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))
@@ -990,6 +1126,149 @@ export default function AdminPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal Chỉnh Sửa Mã Dự Thưởng ── */}
+      {modalEditCode && (
+        <div className={styles.modalOverlay} onClick={handleCloseEditModal}>
+          <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3 className={styles.modalTitle}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+                Chỉnh sửa mã nhận thưởng
+              </h3>
+              <button
+                className={styles.modalCloseBtn}
+                onClick={handleCloseEditModal}
+                title="Đóng"
+                type="button"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditCode} className={styles.modalBody}>
+              <div className={styles.modalUserHighlight}>
+                <div style={{ fontSize: "13px", color: "var(--text-muted)", marginBottom: "4px" }}>
+                  Mã gốc đang chỉnh sửa:
+                </div>
+                <code className={styles.codeMonoLg} style={{ fontSize: "16px" }}>
+                  {modalEditCode.code}
+                </code>
+              </div>
+
+              {/* Code String Input */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{ fontSize: "13px", fontWeight: 700, color: "var(--navy)" }}>
+                  Mã nhận thưởng (Code):
+                </label>
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="VD: TOCTIE-2010-ABCD"
+                  value={editCodeString}
+                  onChange={(e) => {
+                    setEditCodeString(e.target.value.toUpperCase());
+                    setEditError("");
+                    setEditSuccess("");
+                  }}
+                  style={{ fontFamily: "'Courier New', monospace", fontWeight: 700, letterSpacing: "1px" }}
+                  required
+                />
+                <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                  Có thể đổi tên mã nếu nhập sai chính tả hoặc cần chuẩn hóa mã.
+                </span>
+              </div>
+
+              {/* Code Status Selector */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{ fontSize: "13px", fontWeight: 700, color: "var(--navy)" }}>
+                  Trạng thái mã:
+                </label>
+                <div className={styles.editStatusGroup}>
+                  <button
+                    type="button"
+                    className={`${styles.statusOptionBtn} ${!editCodeIsUsed ? styles.statusOptionBtnActive : ""}`}
+                    onClick={() => {
+                      setEditCodeIsUsed(false);
+                      setEditError("");
+                    }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                    Chưa sử dụng
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.statusOptionBtn} ${editCodeIsUsed ? styles.statusOptionBtnActive : ""}`}
+                    onClick={() => {
+                      setEditCodeIsUsed(true);
+                      setEditError("");
+                    }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    Đã sử dụng
+                  </button>
+                </div>
+                <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                  {!editCodeIsUsed
+                    ? "Mã sẽ ở trạng thái sẵn sàng để khách hàng nhập vào mở mảnh ghép."
+                    : "Mã được đánh dấu đã sử dụng, không cho phép nhập thêm lần nữa."}
+                </span>
+              </div>
+
+              {/* If used, user info */}
+              {editCodeIsUsed && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label style={{ fontSize: "13px", fontWeight: 700, color: "var(--navy)" }}>
+                    Tài khoản đã sử dụng:
+                  </label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="Tên tài khoản (tùy chọn)..."
+                    value={editCodeUsedBy}
+                    onChange={(e) => setEditCodeUsedBy(e.target.value)}
+                  />
+                  {modalEditCode.usedAt && (
+                    <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                      Thời gian dùng: {new Date(modalEditCode.usedAt).toLocaleString("vi-VN")}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {editError && <div className="message message-error">{editError}</div>}
+              {editSuccess && <div className="message message-success">{editSuccess}</div>}
+
+              <div style={{ display: "flex", gap: "10px", marginTop: "8px" }}>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={editLoading}
+                  style={{ flex: 1 }}
+                >
+                  {editLoading ? "Đang lưu..." : "Lưu thay đổi"}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handleCloseEditModal}
+                  disabled={editLoading}
+                >
+                  Đóng
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

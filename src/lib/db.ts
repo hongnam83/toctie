@@ -530,3 +530,101 @@ export async function renameUserAccount(
 
   return { success: true, newName: trimmed };
 }
+
+/**
+ * Update / Edit a redemption code (Admin)
+ * Supports renaming the code and updating its used status / usedBy info.
+ */
+export async function updateRedemptionCode(
+  oldCode: string,
+  updates: {
+    newCode?: string;
+    isUsed?: boolean;
+    usedBy?: string | null;
+  }
+): Promise<{
+  success: boolean;
+  code?: RedemptionCode;
+  error?: string;
+}> {
+  const normOld = oldCode.trim().toUpperCase();
+  const store = getStore();
+  const current = store.codes.get(normOld);
+
+  if (!current) {
+    return { success: false, error: `Không tìm thấy mã "${normOld}" trong hệ thống.` };
+  }
+
+  let finalCode = normOld;
+
+  // 1. Rename check
+  if (updates.newCode !== undefined) {
+    const normNew = updates.newCode.trim().toUpperCase();
+    if (!normNew || normNew.length < 3) {
+      return { success: false, error: "Mã dự thưởng mới phải có ít nhất 3 ký tự." };
+    }
+    if (normNew !== normOld && store.codes.has(normNew)) {
+      return { success: false, error: `Mã "${normNew}" đã tồn tại trong hệ thống.` };
+    }
+    finalCode = normNew;
+  }
+
+  // 2. Prepare updated object
+  const newIsUsed = updates.isUsed !== undefined ? updates.isUsed : current.isUsed;
+  const newUsedBy =
+    newIsUsed === false
+      ? undefined
+      : updates.usedBy !== undefined
+      ? (updates.usedBy && updates.usedBy.trim()) || undefined
+      : current.usedBy;
+
+  const newUsedAt =
+    newIsUsed === false
+      ? undefined
+      : newIsUsed && !current.isUsed
+      ? new Date().toISOString()
+      : current.usedAt || (newIsUsed ? new Date().toISOString() : undefined);
+
+  const updatedObj: RedemptionCode = {
+    code: finalCode,
+    isUsed: newIsUsed,
+    usedBy: newUsedBy,
+    usedAt: newUsedAt,
+  };
+
+  // 3. Update in-memory store
+  if (finalCode !== normOld) {
+    store.codes.delete(normOld);
+    // If used by a user, update user's redeemedCodes list
+    for (const u of store.users.values()) {
+      const idx = u.redeemedCodes.indexOf(normOld);
+      if (idx !== -1) {
+        u.redeemedCodes[idx] = finalCode;
+      }
+    }
+  }
+  store.codes.set(finalCode, updatedObj);
+  persistStore();
+
+  // 4. Update in Supabase
+  try {
+    const { error } = await supabaseAdmin
+      .from("redemption_codes")
+      .update({
+        code: finalCode,
+        is_used: updatedObj.isUsed,
+        used_by: updatedObj.usedBy || null,
+        used_at: updatedObj.usedAt || null,
+      })
+      .eq("code", normOld);
+
+    if (error) {
+      console.warn("Lỗi update code Supabase:", error);
+    }
+  } catch (err) {
+    console.warn("Lỗi đồng bộ Supabase khi cập nhật mã:", err);
+  }
+
+  return { success: true, code: updatedObj };
+}
+

@@ -11,6 +11,7 @@ import {
   deleteRedemptionCode,
   deleteBatchRedemptionCodes,
   deleteUnusedRedemptionCodes,
+  updateRedemptionCode,
 } from "@/lib/db";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET || "toctie1234";
@@ -58,6 +59,23 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
+
+    // ACTION: Update / Edit single code
+    if (body.action === "update-code" || body.action === "edit-code") {
+      const { code, newCode, isUsed, usedBy } = body;
+      if (!code) {
+        return NextResponse.json({ error: "Thiếu thông tin mã code cần sửa." }, { status: 400 });
+      }
+      const result = await updateRedemptionCode(code, { newCode, isUsed, usedBy });
+      if (!result.success) {
+        return NextResponse.json({ error: result.error }, { status: 400 });
+      }
+      return NextResponse.json({
+        success: true,
+        message: `Đã cập nhật mã "${result.code?.code}" thành công.`,
+        code: result.code,
+      });
+    }
 
     // ACTION: Delete single code
     if (body.action === "delete-code") {
