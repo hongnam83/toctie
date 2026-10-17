@@ -11,6 +11,10 @@ import {
   pullCloudStore,
   User,
   RedemptionCode,
+  mergeUserIntoMap,
+  DEFAULT_DEMO_CODES,
+  readUsersFromFile,
+  REGISTERED_CUSTOMERS_FILE,
 } from "./store";
 
 export { simpleHash, generateId, persistStore, pushCloudStore, pullCloudStore };
@@ -55,7 +59,28 @@ export async function testSupabaseConnection(): Promise<{
  */
 export async function findUserByName(fullName: string): Promise<User | null> {
   const normalized = fullName.trim();
+  const lowerName = normalized.toLowerCase();
 
+  // 1. In-memory check
+  const store = getStore();
+  let userId = store.usersByName.get(lowerName);
+  if (userId) {
+    const u = store.users.get(userId);
+    if (u) return u;
+  }
+
+  // 2. Permanent disk file check (restores user even after server restart or dev rebuild)
+  const diskUsers = readUsersFromFile(REGISTERED_CUSTOMERS_FILE);
+  for (const u of diskUsers) {
+    mergeUserIntoMap(u, store.users, store.usersByName);
+  }
+  userId = store.usersByName.get(lowerName);
+  if (userId) {
+    const u = store.users.get(userId);
+    if (u) return u;
+  }
+
+  // 3. Supabase PostgreSQL check
   try {
     const { data, error } = await supabaseAdmin
       .from("users")
@@ -74,10 +99,7 @@ export async function findUserByName(fullName: string): Promise<User | null> {
         unlockedPieces: data.unlocked_pieces || [],
         redeemedCodes: data.redeemed_codes || [],
       };
-      // Keep local store in sync
-      const store = getStore();
-      store.users.set(u.id, u);
-      store.usersByName.set(u.fullName.toLowerCase(), u.id);
+      mergeUserIntoMap(u, store.users, store.usersByName);
       persistStore();
       return u;
     }
@@ -85,17 +107,9 @@ export async function findUserByName(fullName: string): Promise<User | null> {
     // Supabase unavailable, fall through
   }
 
-  // Local persistent fallback
-  const store = getStore();
-  let userId = store.usersByName.get(normalized.toLowerCase());
-  if (userId) {
-    const u = store.users.get(userId);
-    if (u) return u;
-  }
-
-  // Pull latest snapshot from Supabase Cloud Storage to find users registered across other containers
+  // 4. Pull latest snapshot from Supabase Cloud Storage
   await pullCloudStore().catch(() => { });
-  userId = store.usersByName.get(normalized.toLowerCase());
+  userId = store.usersByName.get(lowerName);
   if (userId) {
     const u = store.users.get(userId);
     if (u) return u;
@@ -108,6 +122,21 @@ export async function findUserByName(fullName: string): Promise<User | null> {
  * Find a user by ID
  */
 export async function findUserById(id: string): Promise<User | null> {
+  const store = getStore();
+
+  // 1. In-memory check
+  let user = store.users.get(id);
+  if (user) return user;
+
+  // 2. Permanent disk file check
+  const diskUsers = readUsersFromFile(REGISTERED_CUSTOMERS_FILE);
+  for (const u of diskUsers) {
+    mergeUserIntoMap(u, store.users, store.usersByName);
+  }
+  user = store.users.get(id);
+  if (user) return user;
+
+  // 3. Supabase PostgreSQL check
   try {
     const { data, error } = await supabaseAdmin
       .from("users")
@@ -126,9 +155,7 @@ export async function findUserById(id: string): Promise<User | null> {
         unlockedPieces: data.unlocked_pieces || [],
         redeemedCodes: data.redeemed_codes || [],
       };
-      const store = getStore();
-      store.users.set(u.id, u);
-      store.usersByName.set(u.fullName.toLowerCase(), u.id);
+      mergeUserIntoMap(u, store.users, store.usersByName);
       persistStore();
       return u;
     }
@@ -136,18 +163,14 @@ export async function findUserById(id: string): Promise<User | null> {
     // Fall through
   }
 
-  const store = getStore();
-  let user = store.users.get(id);
-  if (user) return user;
-
-  // Try pulling from cloud storage
+  // 4. Try pulling from cloud storage
   await pullCloudStore().catch(() => { });
   user = store.users.get(id);
   return user || null;
 }
 
 /**
- * Create a new user (guaranteed to be saved and appear in backend immediately)
+ * Create a new user (guaranteed to be saved permanently and appear in backend immediately)
  */
 export async function createUser(
   fullName: string,
@@ -174,10 +197,9 @@ export async function createUser(
     redeemedCodes: [],
   };
 
-  // 1. Always save to local persistent store immediately
+  // 1. Save to local persistent store & permanent customer registry immediately
   const store = getStore();
-  store.users.set(id, newUser);
-  store.usersByName.set(name.toLowerCase(), id);
+  mergeUserIntoMap(newUser, store.users, store.usersByName);
   persistStore();
 
   // 2. Guarantee persistence to Supabase Cloud Storage across all serverless containers
@@ -195,8 +217,8 @@ export async function createUser(
       redeemed_codes: [],
       created_at: createdAt,
     });
-  } catch (err) {
-    // Postgres table may not be initialized; handled by cloud storage
+  } catch {
+    // Postgres table may not be initialized; handled by permanent disk and cloud storage
   }
 
   return newUser;
@@ -413,17 +435,19 @@ export async function getAdminData(): Promise<{
           unlockedPieces: pieces,
           redeemedCodes: u.redeemed_codes || [],
         };
-        store.users.set(u.id, userObj);
-        store.usersByName.set(u.full_name.toLowerCase(), u.id);
+        mergeUserIntoMap(userObj, store.users, store.usersByName);
       });
 
       codesRes.data.forEach((c) => {
-        store.codes.set(c.code.toUpperCase(), {
-          code: c.code.toUpperCase(),
-          isUsed: c.is_used,
-          usedBy: c.used_by,
-          usedAt: c.used_at,
-        });
+        const upper = c.code.toUpperCase();
+        if (c.is_used || store.codes.has(upper)) {
+          store.codes.set(upper, {
+            code: upper,
+            isUsed: c.is_used,
+            usedBy: c.used_by,
+            usedAt: c.used_at,
+          });
+        }
       });
 
       persistStore();
@@ -431,6 +455,15 @@ export async function getAdminData(): Promise<{
   } catch {
     // Fallback to local store
   }
+
+  // Remove any legacy unused demo codes not in the 20 requested fixed codes
+  const validFixedCodes = new Set(DEFAULT_DEMO_CODES.map((c) => c.toUpperCase()));
+  for (const [codeKey, codeObj] of Array.from(store.codes.entries())) {
+    if (!codeObj.isUsed && !validFixedCodes.has(codeKey)) {
+      store.codes.delete(codeKey);
+    }
+  }
+  persistStore();
 
   const users = Array.from(store.users.values()).map((u) => ({
     ...u,

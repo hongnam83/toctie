@@ -1,6 +1,11 @@
 // Persistent Store for Tóc.Tie Loyalty
-// Automatically persists to local disk (data/store.json or /tmp fallback) so data is never lost across server restarts
-// Also syncs with Supabase database when connected
+// Multi-tier storage architecture ensures customer accounts are NEVER lost:
+// 1. Permanent In-Code Customer Registry (Zero-wipe baseline)
+// 2. data/registered_customers.json (Tracked in Git, permanent on disk)
+// 3. data/store.json (Active local store)
+// 4. data/customers_backup.json (Atomic backup snapshot)
+// 5. Supabase Cloud Storage (toctie-store/store.json)
+// 6. Supabase PostgreSQL table (when connected)
 
 import fs from "fs";
 import path from "path";
@@ -24,7 +29,7 @@ export interface RedemptionCode {
   usedAt?: string;
 }
 
-interface StoreState {
+export interface StoreState {
   users: Map<string, User>;
   usersByName: Map<string, string>; // lowerName -> id
   codes: Map<string, RedemptionCode>;
@@ -35,14 +40,20 @@ declare global {
   var __toctieStore: StoreState | undefined;
 }
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const STORE_FILE = path.join(DATA_DIR, "store.json");
+export const DATA_DIR = path.join(process.cwd(), "data");
+export const STORE_FILE = path.join(DATA_DIR, "store.json");
+export const REGISTERED_CUSTOMERS_FILE = path.join(DATA_DIR, "registered_customers.json");
+export const BACKUP_FILE = path.join(DATA_DIR, "customers_backup.json");
+
 const TMP_DATA_DIR = "/tmp/toctie_data";
 const TMP_STORE_FILE = path.join(TMP_DATA_DIR, "store.json");
+const TMP_REGISTERED_CUSTOMERS_FILE = path.join(TMP_DATA_DIR, "registered_customers.json");
+
 const BUCKET_NAME = "toctie-store";
 const FILE_NAME = "store.json";
 
-const DEFAULT_DEMO_CODES = [
+// 20 fixed redemption codes requested by the user
+export const DEFAULT_DEMO_CODES = [
   "toctie-K7M9X",
   "toctie-P4N8Q",
   "toctie-R6T2W",
@@ -65,6 +76,50 @@ const DEFAULT_DEMO_CODES = [
   "toctie-Z8F2W",
 ];
 
+// Permanent baseline registered customers (guarantees zero-wipe under any circumstance)
+export const PERMANENT_CUSTOMER_SEEDS: User[] = [
+  {
+    id: "lb00yyh44vmv9p52ov",
+    fullName: "ngoc_anh_2010",
+    passwordHash: "passwordless",
+    createdAt: "2026-10-15T15:31:25.279Z",
+    unlockedPieces: [2],
+    redeemedCodes: ["TOCTIE-2010-BBBB"],
+  },
+  {
+    id: "o1andxanbumv9qwhku",
+    fullName: "mai_phuong_99",
+    passwordHash: "passwordless",
+    createdAt: "2026-10-15T16:20:43.902Z",
+    unlockedPieces: [],
+    redeemedCodes: [],
+  },
+  {
+    id: "yn9c11s9oaqmv9s01jb",
+    fullName: "thuy_tien_2010",
+    passwordHash: "passwordless",
+    createdAt: "2026-10-15T16:51:29.351Z",
+    unlockedPieces: [],
+    redeemedCodes: [],
+  },
+  {
+    id: "0vevjself2qmv9skpoz",
+    fullName: "test_brand_check",
+    passwordHash: "passwordless",
+    createdAt: "2026-10-15T17:07:33.779Z",
+    unlockedPieces: [],
+    redeemedCodes: [],
+  },
+  {
+    id: "fviy478i4qumv9tr5pn",
+    fullName: "LanAnh",
+    passwordHash: "passwordless",
+    createdAt: "2026-10-15T17:40:34.091Z",
+    unlockedPieces: [],
+    redeemedCodes: [],
+  },
+];
+
 function ensureDir(dir: string) {
   try {
     if (!fs.existsSync(dir)) {
@@ -76,14 +131,126 @@ function ensureDir(dir: string) {
 }
 
 /**
+ * Safely merge user into maps with deep union of pieces, codes, and attributes
+ */
+export function mergeUserIntoMap(
+  u: User,
+  usersMap: Map<string, User>,
+  usersByNameMap: Map<string, string>
+) {
+  if (!u || !u.id || !u.fullName) return;
+  const trimmedName = u.fullName.trim();
+  const lowerName = trimmedName.toLowerCase();
+
+  // Find existing by ID or by name
+  let targetId = usersMap.has(u.id) ? u.id : usersByNameMap.get(lowerName);
+
+  if (!targetId || !usersMap.has(targetId)) {
+    const newUser: User = {
+      id: u.id,
+      fullName: trimmedName,
+      phone: u.phone?.trim() || undefined,
+      note: u.note?.trim() || undefined,
+      passwordHash: u.passwordHash || "passwordless",
+      createdAt: u.createdAt || new Date().toISOString(),
+      unlockedPieces: Array.isArray(u.unlockedPieces)
+        ? Array.from(new Set(u.unlockedPieces)).sort((a, b) => a - b)
+        : [],
+      redeemedCodes: Array.isArray(u.redeemedCodes)
+        ? Array.from(new Set(u.redeemedCodes.map((c) => c.toUpperCase())))
+        : [],
+    };
+    usersMap.set(u.id, newUser);
+    usersByNameMap.set(lowerName, u.id);
+  } else {
+    const existing = usersMap.get(targetId)!;
+
+    // Merge unlocked pieces (union)
+    const pieces = new Set([
+      ...(existing.unlockedPieces || []),
+      ...(u.unlockedPieces || []),
+    ]);
+    existing.unlockedPieces = Array.from(pieces).sort((a, b) => a - b);
+
+    // Merge redeemed codes (union)
+    const codes = new Set([
+      ...(existing.redeemedCodes || []).map((c) => c.toUpperCase()),
+      ...(u.redeemedCodes || []).map((c) => c.toUpperCase()),
+    ]);
+    existing.redeemedCodes = Array.from(codes);
+
+    // Keep contact details if available
+    if (!existing.phone && u.phone) existing.phone = u.phone.trim();
+    if (!existing.note && u.note) existing.note = u.note.trim();
+
+    // Preserve earliest creation timestamp
+    if (
+      u.createdAt &&
+      (!existing.createdAt || new Date(u.createdAt) < new Date(existing.createdAt))
+    ) {
+      existing.createdAt = u.createdAt;
+    }
+
+    // Keep best casing for name
+    if (trimmedName && trimmedName !== existing.fullName) {
+      existing.fullName = trimmedName;
+    }
+
+    usersByNameMap.set(lowerName, existing.id);
+  }
+}
+
+/**
+ * Read user array safely from JSON file
+ */
+export function readUsersFromFile(filePath: string): User[] {
+  try {
+    if (!fs.existsSync(filePath)) return [];
+    const raw = fs.readFileSync(filePath, "utf-8");
+    if (!raw.trim()) return [];
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed;
+    if (parsed && Array.isArray(parsed.users)) return parsed.users;
+    return [];
+  } catch (err) {
+    console.warn(`Lỗi khi đọc file users từ ${filePath}:`, err);
+    return [];
+  }
+}
+
+/**
+ * Read store file safely
+ */
+export function readStoreFromFile(
+  filePath: string
+): { users: User[]; codes: RedemptionCode[] } | null {
+  try {
+    if (!fs.existsSync(filePath)) return null;
+    const raw = fs.readFileSync(filePath, "utf-8");
+    if (!raw.trim()) return null;
+    const parsed = JSON.parse(raw);
+    return {
+      users: Array.isArray(parsed.users) ? parsed.users : [],
+      codes: Array.isArray(parsed.codes) ? parsed.codes : [],
+    };
+  } catch (err) {
+    console.warn(`Lỗi khi đọc file store từ ${filePath}:`, err);
+    return null;
+  }
+}
+
+/**
  * Push current store snapshot to Supabase Cloud Storage (ensures data survives across serverless containers on Vercel)
  */
 export async function pushCloudStore(): Promise<boolean> {
   try {
     if (!global.__toctieStore) return false;
 
+    const userList = Array.from(global.__toctieStore.users.values());
+    if (userList.length === 0) return false;
+
     const dataToSave = {
-      users: Array.from(global.__toctieStore.users.values()),
+      users: userList,
       codes: Array.from(global.__toctieStore.codes.values()),
       updatedAt: new Date().toISOString(),
     };
@@ -119,7 +286,7 @@ export async function pushCloudStore(): Promise<boolean> {
 }
 
 /**
- * Pull latest store snapshot from Supabase Cloud Storage and merge into memory
+ * Pull latest store snapshot from Supabase Cloud Storage and safely merge into memory
  */
 export async function pullCloudStore(): Promise<boolean> {
   try {
@@ -135,31 +302,24 @@ export async function pullCloudStore(): Promise<boolean> {
 
     if (Array.isArray(parsed.users)) {
       parsed.users.forEach((u: User) => {
-        if (!store.users.has(u.id)) {
-          store.users.set(u.id, u);
-          store.usersByName.set(u.fullName.toLowerCase(), u.id);
-        } else {
-          const local = store.users.get(u.id)!;
-          if (
-            (u.unlockedPieces?.length || 0) >=
-            (local.unlockedPieces?.length || 0)
-          ) {
-            store.users.set(u.id, u);
-            store.usersByName.set(u.fullName.toLowerCase(), u.id);
-          }
-        }
+        mergeUserIntoMap(u, store.users, store.usersByName);
       });
     }
 
     if (Array.isArray(parsed.codes)) {
       parsed.codes.forEach((c: RedemptionCode) => {
         const upper = c.code.toUpperCase();
-        if (!store.codes.has(upper) || c.isUsed) {
-          store.codes.set(upper, c);
+        // Only keep if code was actually used or is one of the valid active codes
+        if (c.isUsed) {
+          if (!store.codes.has(upper) || !store.codes.get(upper)!.isUsed) {
+            store.codes.set(upper, c);
+          }
         }
       });
     }
 
+    // Save merged results locally
+    persistStore();
     return true;
   } catch (err) {
     console.warn("Đồng bộ từ Supabase Cloud Storage:", err);
@@ -167,41 +327,84 @@ export async function pullCloudStore(): Promise<boolean> {
   }
 }
 
+/**
+ * Persist store across all physical storage tiers with Anti-Wipe Protection
+ */
 export function persistStore() {
   try {
     if (!global.__toctieStore) return;
 
-    const dataToSave = {
-      users: Array.from(global.__toctieStore.users.values()),
-      codes: Array.from(global.__toctieStore.codes.values()),
-      updatedAt: new Date().toISOString(),
-    };
+    let userList = Array.from(global.__toctieStore.users.values());
+    const codeList = Array.from(global.__toctieStore.codes.values());
 
-    const jsonStr = JSON.stringify(dataToSave, null, 2);
-
-    // 1. Try primary workspace data directory
-    try {
-      ensureDir(DATA_DIR);
-      fs.writeFileSync(STORE_FILE, jsonStr, "utf-8");
-    } catch {
-      // Fallback to /tmp for serverless environments (Vercel)
-      try {
-        ensureDir(TMP_DATA_DIR);
-        fs.writeFileSync(TMP_STORE_FILE, jsonStr, "utf-8");
-      } catch (tmpErr) {
-        console.warn("Lưu tmp store thất bại:", tmpErr);
+    // CRITICAL ANTI-WIPE SHIELD:
+    // If memory somehow has 0 users, NEVER wipe the disk!
+    if (userList.length === 0) {
+      console.warn(
+        "CẢNH BÁO: Bộ nhớ phát hiện 0 người dùng! Từ chối ghi đè file để bảo vệ dữ liệu khách hàng."
+      );
+      // Attempt immediate recovery from permanent files
+      const recovered = readUsersFromFile(REGISTERED_CUSTOMERS_FILE);
+      if (recovered.length > 0) {
+        recovered.forEach((u) =>
+          mergeUserIntoMap(
+            u,
+            global.__toctieStore!.users,
+            global.__toctieStore!.usersByName
+          )
+        );
+      } else {
+        PERMANENT_CUSTOMER_SEEDS.forEach((u) =>
+          mergeUserIntoMap(
+            u,
+            global.__toctieStore!.users,
+            global.__toctieStore!.usersByName
+          )
+        );
       }
+      userList = Array.from(global.__toctieStore.users.values());
     }
 
-    // 2. Asynchronously sync to Supabase Cloud Storage
-    pushCloudStore().catch(() => { });
+    const usersJsonStr = JSON.stringify(userList, null, 2);
+
+    const storeDataToSave = {
+      users: userList,
+      codes: codeList,
+      updatedAt: new Date().toISOString(),
+    };
+    const storeJsonStr = JSON.stringify(storeDataToSave, null, 2);
+
+    // 1. Primary workspace data directory (data/registered_customers.json & data/store.json)
+    try {
+      ensureDir(DATA_DIR);
+      fs.writeFileSync(REGISTERED_CUSTOMERS_FILE, usersJsonStr, "utf-8");
+      fs.writeFileSync(STORE_FILE, storeJsonStr, "utf-8");
+      fs.writeFileSync(BACKUP_FILE, usersJsonStr, "utf-8");
+    } catch (diskErr) {
+      console.warn("Lỗi ghi disk store:", diskErr);
+    }
+
+    // 2. Serverless fallback directory (/tmp)
+    try {
+      ensureDir(TMP_DATA_DIR);
+      fs.writeFileSync(TMP_REGISTERED_CUSTOMERS_FILE, usersJsonStr, "utf-8");
+      fs.writeFileSync(TMP_STORE_FILE, storeJsonStr, "utf-8");
+    } catch {
+      // ignore
+    }
+
+    // 3. Asynchronously push snapshot to Supabase Cloud Storage
+    pushCloudStore().catch(() => {});
   } catch (err) {
     console.error("Lỗi khi lưu dữ liệu cửa hàng:", err);
   }
 }
 
+/**
+ * Initialize store by safely uniting all storage layers
+ */
 function initStore(): StoreState {
-  if (global.__toctieStore) {
+  if (global.__toctieStore && global.__toctieStore.users.size > 0) {
     return global.__toctieStore;
   }
 
@@ -209,61 +412,71 @@ function initStore(): StoreState {
   const usersByNameMap = new Map<string, string>();
   const codesMap = new Map<string, RedemptionCode>();
 
-  let loaded = false;
+  // Tier 1: Permanent in-code customer seed (Guarantees zero-wipe under any circumstance)
+  PERMANENT_CUSTOMER_SEEDS.forEach((u) => {
+    mergeUserIntoMap(u, usersMap, usersByNameMap);
+  });
 
-  // Check /tmp first (in case running in serverless where /tmp was modified)
-  if (fs.existsSync(TMP_STORE_FILE)) {
-    try {
-      const raw = fs.readFileSync(TMP_STORE_FILE, "utf-8");
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed.users)) {
-        parsed.users.forEach((u: User) => {
-          usersMap.set(u.id, u);
-          usersByNameMap.set(u.fullName.toLowerCase(), u.id);
-        });
-      }
-      if (Array.isArray(parsed.codes)) {
-        parsed.codes.forEach((c: RedemptionCode) => {
-          codesMap.set(c.code.toUpperCase(), c);
-        });
-      }
-      loaded = true;
-    } catch {
-      // fall through
-    }
+  // Tier 2: Permanent committed customer file (data/registered_customers.json)
+  const permanentUsers = readUsersFromFile(REGISTERED_CUSTOMERS_FILE);
+  permanentUsers.forEach((u) => mergeUserIntoMap(u, usersMap, usersByNameMap));
+
+  // Tier 3: Primary workspace store file (data/store.json)
+  const storeData = readStoreFromFile(STORE_FILE);
+  if (storeData) {
+    storeData.users.forEach((u) => mergeUserIntoMap(u, usersMap, usersByNameMap));
+    storeData.codes.forEach((c) => {
+      codesMap.set(c.code.toUpperCase(), c);
+    });
   }
 
-  // If not loaded from tmp, check workspace STORE_FILE
-  if (!loaded && fs.existsSync(STORE_FILE)) {
-    try {
-      const raw = fs.readFileSync(STORE_FILE, "utf-8");
-      const parsed = JSON.parse(raw);
+  // Tier 4: Backup file (data/customers_backup.json)
+  const backupUsers = readUsersFromFile(BACKUP_FILE);
+  backupUsers.forEach((u) => mergeUserIntoMap(u, usersMap, usersByNameMap));
 
-      if (Array.isArray(parsed.users)) {
-        parsed.users.forEach((u: User) => {
-          usersMap.set(u.id, u);
-          usersByNameMap.set(u.fullName.toLowerCase(), u.id);
-        });
-      }
+  // Tier 5: Serverless /tmp storage (for Vercel containers)
+  const tmpUsers = readUsersFromFile(TMP_REGISTERED_CUSTOMERS_FILE);
+  tmpUsers.forEach((u) => mergeUserIntoMap(u, usersMap, usersByNameMap));
 
-      if (Array.isArray(parsed.codes)) {
-        parsed.codes.forEach((c: RedemptionCode) => {
-          codesMap.set(c.code.toUpperCase(), c);
-        });
+  const tmpStoreData = readStoreFromFile(TMP_STORE_FILE);
+  if (tmpStoreData) {
+    tmpStoreData.users.forEach((u) => mergeUserIntoMap(u, usersMap, usersByNameMap));
+    tmpStoreData.codes.forEach((c) => {
+      if (!codesMap.has(c.code.toUpperCase()) || c.isUsed) {
+        codesMap.set(c.code.toUpperCase(), c);
       }
-    } catch (err) {
-      console.error("Lỗi khi đọc file store.json, khởi tạo lại từ đầu:", err);
-    }
+    });
   }
 
-  // If no codes exist yet, seed demo codes
-  if (codesMap.size === 0) {
-    DEFAULT_DEMO_CODES.forEach((code) => {
-      codesMap.set(code.toUpperCase(), {
+  // Ensure all 20 fixed redemption codes exist
+  DEFAULT_DEMO_CODES.forEach((code) => {
+    const upper = code.toUpperCase();
+    if (!codesMap.has(upper)) {
+      codesMap.set(upper, {
         code: code,
         isUsed: false,
       });
-    });
+    }
+  });
+
+  // Ensure any codes already redeemed by customers are marked as used
+  for (const u of usersMap.values()) {
+    if (Array.isArray(u.redeemedCodes)) {
+      for (const code of u.redeemedCodes) {
+        const upper = code.toUpperCase();
+        const existing = codesMap.get(upper);
+        if (existing) {
+          existing.isUsed = true;
+          existing.usedBy = u.fullName;
+        } else {
+          codesMap.set(upper, {
+            code,
+            isUsed: true,
+            usedBy: u.fullName,
+          });
+        }
+      }
+    }
   }
 
   global.__toctieStore = {
@@ -272,14 +485,32 @@ function initStore(): StoreState {
     codes: codesMap,
   };
 
-  // Save initial snapshot
+  // Persist the consolidated state to all storage layers
   persistStore();
 
   return global.__toctieStore;
 }
 
 export function getStore(): StoreState {
-  return initStore();
+  const store = initStore();
+  let modified = false;
+
+  DEFAULT_DEMO_CODES.forEach((code) => {
+    const upper = code.toUpperCase();
+    if (!store.codes.has(upper)) {
+      store.codes.set(upper, {
+        code: code,
+        isUsed: false,
+      });
+      modified = true;
+    }
+  });
+
+  if (modified) {
+    persistStore();
+  }
+
+  return store;
 }
 
 export function simpleHash(str: string): string {

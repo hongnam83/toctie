@@ -119,7 +119,8 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ error: "Hành động không hợp lệ." }, { status: 400 });
-  } catch {
+  } catch (err) {
+    console.error("Lỗi API auth:", err);
     return NextResponse.json({ error: "Lỗi server. Vui lòng thử lại." }, { status: 500 });
   }
 }
