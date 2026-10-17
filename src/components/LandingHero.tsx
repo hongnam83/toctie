@@ -10,7 +10,7 @@ interface Props {
 
 const NAV_ITEMS = [
   { id: "trang-chu", label: "Trang chủ" },
-  { id: "hanh-trinh", label: "Hành trình" },
+  { id: "hanh-trinh", label: "Quy trình nhận thưởng" },
   { id: "qua-tang", label: "Quà tặng 20/10" },
   { id: "cau-chuyen", label: "Về tóc.tie" },
   { id: "faq", label: "Hỏi & Đáp" },
@@ -480,8 +480,8 @@ export default function LandingHero({ onOpenAuth }: Props) {
       <section className={styles.journeySection} id="hanh-trinh">
         <div className={styles.sectionContainer}>
           <div className={styles.sectionHeadingBox}>
-            <span className={styles.sectionPill}>Quy trình đơn giản</span>
-            <h2 className={styles.sectionTitle}>Hành trình 4 mảnh ghép</h2>
+            <span className={styles.sectionPill}>3 bước dễ dàng</span>
+            <h2 className={styles.sectionTitle}>Quy trình nhận thưởng</h2>
             <p className={styles.sectionSubtitle}>
               Chỉ với 3 bước chạm, bạn sẽ hoàn thiện bức tranh quà tặng bí mật cùng tóc.tie
             </p>
