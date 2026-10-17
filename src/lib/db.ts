@@ -94,7 +94,7 @@ export async function findUserByName(fullName: string): Promise<User | null> {
   }
 
   // Pull latest snapshot from Supabase Cloud Storage to find users registered across other containers
-  await pullCloudStore().catch(() => {});
+  await pullCloudStore().catch(() => { });
   userId = store.usersByName.get(normalized.toLowerCase());
   if (userId) {
     const u = store.users.get(userId);
@@ -141,7 +141,7 @@ export async function findUserById(id: string): Promise<User | null> {
   if (user) return user;
 
   // Try pulling from cloud storage
-  await pullCloudStore().catch(() => {});
+  await pullCloudStore().catch(() => { });
   user = store.users.get(id);
   return user || null;
 }
@@ -181,7 +181,7 @@ export async function createUser(
   persistStore();
 
   // 2. Guarantee persistence to Supabase Cloud Storage across all serverless containers
-  await pushCloudStore().catch(() => {});
+  await pushCloudStore().catch(() => { });
 
   // 3. Sync to Supabase PostgreSQL table if ready
   try {
@@ -252,7 +252,7 @@ export async function updateUser(
   }
 
   persistStore();
-  await pushCloudStore().catch(() => {});
+  await pushCloudStore().catch(() => { });
 
   try {
     await supabaseAdmin
@@ -287,7 +287,7 @@ export async function deleteUser(
   store.users.delete(userId);
   store.usersByName.delete(user.fullName.toLowerCase());
   persistStore();
-  await pushCloudStore().catch(() => {});
+  await pushCloudStore().catch(() => { });
 
   try {
     await supabaseAdmin.from("users").delete().eq("id", userId);
@@ -354,7 +354,7 @@ export async function redeemCode(
     memoryUser.redeemedCodes = updatedCodes;
   }
   persistStore();
-  await pushCloudStore().catch(() => {});
+  await pushCloudStore().catch(() => { });
 
   // 2. Sync to Supabase
   try {
@@ -392,7 +392,7 @@ export async function getAdminData(): Promise<{
   const store = getStore();
 
   // Always pull latest cloud store so accounts created across all serverless containers appear immediately
-  await pullCloudStore().catch(() => {});
+  await pullCloudStore().catch(() => { });
 
   try {
     const [usersRes, codesRes] = await Promise.all([
@@ -687,15 +687,15 @@ export async function updateRedemptionCode(
     newIsUsed === false
       ? undefined
       : updates.usedBy !== undefined
-      ? (updates.usedBy && updates.usedBy.trim()) || undefined
-      : current.usedBy;
+        ? (updates.usedBy && updates.usedBy.trim()) || undefined
+        : current.usedBy;
 
   const newUsedAt =
     newIsUsed === false
       ? undefined
       : newIsUsed && !current.isUsed
-      ? new Date().toISOString()
-      : current.usedAt || (newIsUsed ? new Date().toISOString() : undefined);
+        ? new Date().toISOString()
+        : current.usedAt || (newIsUsed ? new Date().toISOString() : undefined);
 
   const updatedObj: RedemptionCode = {
     code: finalCode,

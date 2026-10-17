@@ -194,7 +194,7 @@ export function persistStore() {
     }
 
     // 2. Asynchronously sync to Supabase Cloud Storage
-    pushCloudStore().catch(() => {});
+    pushCloudStore().catch(() => { });
   } catch (err) {
     console.error("Lỗi khi lưu dữ liệu cửa hàng:", err);
   }

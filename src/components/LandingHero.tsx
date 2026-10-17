@@ -128,16 +128,6 @@ export default function LandingHero({ onOpenAuth }: Props) {
                   <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </button>
-              <div className={styles.ctaAssurance}>
-                <span className={styles.checkIcon}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                </span>
-                <span>Miễn phí tham gia</span>
-                <span className={styles.dotSeparator}>·</span>
-                <span>Mỗi mã mở đúng 1 góc không trùng</span>
-              </div>
             </div>
           </div>
 

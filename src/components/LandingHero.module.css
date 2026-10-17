@@ -259,24 +259,6 @@
   gap: 10px;
 }
 
-.ctaAssurance {
-  font-size: 14px;
-  color: var(--text-muted);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.checkIcon {
-  color: #059669;
-  display: flex;
-  align-items: center;
-}
-
-.dotSeparator {
-  color: var(--blue-pastel);
-}
-
 /* ── Right Hero: Puzzle Teaser Card ── */
 .heroVisualCol {
   flex: 0.95;

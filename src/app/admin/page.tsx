@@ -99,22 +99,18 @@ export default function AdminPage() {
 
   // Customer registration states (Thêm & Lưu thông tin khách hàng)
   const [newCustomerName, setNewCustomerName] = useState("");
-  const [newCustomerPhone, setNewCustomerPhone] = useState("");
-  const [newCustomerNote, setNewCustomerNote] = useState("");
   const [newCustomerPieces, setNewCustomerPieces] = useState<number>(0);
   const [addCustomerMsg, setAddCustomerMsg] = useState("");
   const [addCustomerLoading, setAddCustomerLoading] = useState(false);
 
   // User search & filters
   const [userSearch, setUserSearch] = useState("");
-  const [userFilter, setUserFilter] = useState<"all" | "completed" | "in_progress" | "no_codes" | "has_phone">("all");
+  const [userFilter, setUserFilter] = useState<"all" | "completed" | "in_progress" | "no_codes">("all");
   const [userNoticeMsg, setUserNoticeMsg] = useState("");
 
   // User Edit & Manage modal
   const [modalUser, setModalUser] = useState<AdminUser | null>(null);
   const [editFullName, setEditFullName] = useState("");
-  const [editPhone, setEditPhone] = useState("");
-  const [editNote, setEditNote] = useState("");
   const [editPieceCount, setEditPieceCount] = useState<number>(0);
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState("");
@@ -183,8 +179,6 @@ export default function AdminPage() {
         body: JSON.stringify({
           action: "create-user",
           fullName: trimmedName,
-          phone: newCustomerPhone.trim(),
-          note: newCustomerNote.trim(),
           initialPieceCount: Number(newCustomerPieces) || 0,
         }),
       });
@@ -198,8 +192,6 @@ export default function AdminPage() {
 
       setAddCustomerMsg(data.message || `Đã lưu khách hàng "${trimmedName}" thành công.`);
       setNewCustomerName("");
-      setNewCustomerPhone("");
-      setNewCustomerNote("");
       setNewCustomerPieces(0);
       setTimeout(() => setAddCustomerMsg(""), 5000);
       fetchData(secret);
@@ -214,8 +206,6 @@ export default function AdminPage() {
   const handleOpenUserModal = (u: AdminUser) => {
     setModalUser(u);
     setEditFullName(u.fullName);
-    setEditPhone(u.phone || "");
-    setEditNote(u.note || "");
     setEditPieceCount(u.pieceCount);
     setActionError("");
     setActionSuccess("");
@@ -251,8 +241,6 @@ export default function AdminPage() {
           action: "update-user",
           userId: modalUser.id,
           fullName: trimmedName,
-          phone: editPhone.trim(),
-          note: editNote.trim(),
           pieceCount: Number(editPieceCount),
         }),
       });
@@ -309,12 +297,10 @@ export default function AdminPage() {
       return;
     }
 
-    const headers = ["ID", "Tên tài khoản", "Số điện thoại", "Ghi chú", "Số mảnh ghép", "Trạng thái", "Ngày tham gia", "Mã đã dùng"];
+    const headers = ["ID", "Tên tài khoản", "Số mảnh ghép", "Trạng thái", "Ngày tham gia", "Mã đã dùng"];
     const rows = users.map((u) => [
       `"${u.id}"`,
       `"${u.fullName.replace(/"/g, '""')}"`,
-      `"${(u.phone || "").replace(/"/g, '""')}"`,
-      `"${(u.note || "").replace(/"/g, '""')}"`,
       u.pieceCount,
       u.isComplete ? "Hoàn thành" : "Đang gom mảnh",
       `"${new Date(u.createdAt).toLocaleString("vi-VN")}"`,
@@ -330,21 +316,6 @@ export default function AdminPage() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  };
-
-  const handleCopyPhoneList = () => {
-    const phoneList = users
-      .map((u) => u.phone?.trim())
-      .filter((p): p is string => Boolean(p && p.length >= 7));
-
-    if (phoneList.length === 0) {
-      alert("Chưa có số điện thoại khách hàng nào được lưu.");
-      return;
-    }
-
-    navigator.clipboard.writeText(phoneList.join("\n"));
-    setUserNoticeMsg(`Đã sao chép ${phoneList.length} số điện thoại vào bộ nhớ tạm!`);
-    setTimeout(() => setUserNoticeMsg(""), 4000);
   };
 
   // ── THÊM MÃ CODE MỚI ──
@@ -600,13 +571,11 @@ export default function AdminPage() {
     if (userFilter === "completed" && !u.isComplete) return false;
     if (userFilter === "in_progress" && (u.isComplete || u.pieceCount === 0)) return false;
     if (userFilter === "no_codes" && u.pieceCount !== 0) return false;
-    if (userFilter === "has_phone" && (!u.phone || !u.phone.trim())) return false;
 
     if (userSearch.trim()) {
       const q = userSearch.toLowerCase().trim();
       return (
         u.fullName.toLowerCase().includes(q) ||
-        (u.phone && u.phone.includes(q)) ||
         u.id.toLowerCase().includes(q)
       );
     }
@@ -894,32 +863,6 @@ export default function AdminPage() {
 
                 <div>
                   <label style={{ fontSize: "13px", fontWeight: 700, color: "var(--navy)", display: "block", marginBottom: "4px" }}>
-                    Số điện thoại liên hệ (tùy chọn)
-                  </label>
-                  <input
-                    type="tel"
-                    className="input-field"
-                    placeholder="VD: 0912345678..."
-                    value={newCustomerPhone}
-                    onChange={(e) => setNewCustomerPhone(e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ fontSize: "13px", fontWeight: 700, color: "var(--navy)", display: "block", marginBottom: "4px" }}>
-                    Ghi chú / Nguồn khách (tùy chọn)
-                  </label>
-                  <input
-                    type="text"
-                    className="input-field"
-                    placeholder="VD: Khách inbox Fanpage, khách tại quầy..."
-                    value={newCustomerNote}
-                    onChange={(e) => setNewCustomerNote(e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ fontSize: "13px", fontWeight: 700, color: "var(--navy)", display: "block", marginBottom: "4px" }}>
                     Số mảnh ghép ban đầu:
                   </label>
                   <select
@@ -974,10 +917,6 @@ export default function AdminPage() {
                   <strong>{users.filter((u) => u.pieceCount > 0 && !u.isComplete).length}</strong>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span>Khách có số điện thoại:</span>
-                  <strong>{users.filter((u) => u.phone && u.phone.trim()).length}</strong>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <span>Khách hoàn thành 4 mảnh:</span>
                   <strong style={{ color: "#166534" }}>{users.filter((u) => u.isComplete).length}</strong>
                 </div>
@@ -1007,22 +946,10 @@ export default function AdminPage() {
                     </svg>
                     Xuất CSV
                   </button>
-                  <button
-                    type="button"
-                    className={styles.btnExport}
-                    onClick={handleCopyPhoneList}
-                    title="Sao chép danh sách số điện thoại để gửi tin nhắn"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                    </svg>
-                    Sao chép SĐT
-                  </button>
                   <input
                     type="text"
                     className={styles.searchInput}
-                    placeholder="Tìm theo tên, SĐT..."
+                    placeholder="Tìm theo tên tài khoản..."
                     value={userSearch}
                     onChange={(e) => setUserSearch(e.target.value)}
                   />
@@ -1032,7 +959,6 @@ export default function AdminPage() {
                       { key: "no_codes", label: `Chưa nhập mã (${users.filter((u) => u.pieceCount === 0).length})` },
                       { key: "in_progress", label: `Đang gom (${users.filter((u) => u.pieceCount > 0 && !u.isComplete).length})` },
                       { key: "completed", label: `Đủ 4 mảnh (${users.filter((u) => u.isComplete).length})` },
-                      { key: "has_phone", label: `Có SĐT (${users.filter((u) => u.phone && u.phone.trim()).length})` },
                     ].map((f) => (
                       <button
                         key={f.key}
@@ -1065,8 +991,6 @@ export default function AdminPage() {
                     <thead>
                       <tr>
                         <th>Khách hàng</th>
-                        <th>Số điện thoại</th>
-                        <th>Ghi chú</th>
                         <th>Ngày đăng ký</th>
                         <th>Mảnh ghép</th>
                         <th>Trạng thái</th>
@@ -1092,31 +1016,6 @@ export default function AdminPage() {
                                   {u.id.slice(0, 10)}...
                                 </div>
                               </div>
-                            </td>
-                            <td>
-                              {u.phone ? (
-                                <span
-                                  className={styles.customerPhoneBadge}
-                                  onClick={() => copyToClipboard(u.phone!, "số điện thoại")}
-                                  title="Bấm để sao chép số điện thoại"
-                                >
-                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-                                  </svg>
-                                  {u.phone}
-                                </span>
-                              ) : (
-                                <span style={{ color: "var(--text-muted)", fontSize: "12px" }}>—</span>
-                              )}
-                            </td>
-                            <td>
-                              {u.note ? (
-                                <div className={styles.customerNoteText} title={u.note}>
-                                  {u.note}
-                                </div>
-                              ) : (
-                                <span style={{ color: "var(--text-muted)", fontSize: "12px" }}>—</span>
-                              )}
                             </td>
                             <td className={styles.tdDate}>
                               {new Date(u.createdAt).toLocaleDateString("vi-VN", {
@@ -1556,32 +1455,6 @@ export default function AdminPage() {
                       setActionError("");
                     }}
                     required
-                  />
-                </div>
-
-                <div>
-                  <label style={{ fontSize: "13px", fontWeight: 700, color: "var(--navy)", display: "block", marginBottom: "4px" }}>
-                    Số điện thoại:
-                  </label>
-                  <input
-                    type="tel"
-                    className="input-field"
-                    placeholder="VD: 0912345678"
-                    value={editPhone}
-                    onChange={(e) => setEditPhone(e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ fontSize: "13px", fontWeight: 700, color: "var(--navy)", display: "block", marginBottom: "4px" }}>
-                    Ghi chú / Kênh liên hệ:
-                  </label>
-                  <input
-                    type="text"
-                    className="input-field"
-                    placeholder="VD: Inbox Facebook, VIP..."
-                    value={editNote}
-                    onChange={(e) => setEditNote(e.target.value)}
                   />
                 </div>
 
