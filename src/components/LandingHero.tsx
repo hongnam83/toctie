@@ -23,7 +23,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Tôi có cần tài khoản mạng xã hội hay mật khẩu phức tạp không?",
-    a: "Không cần! Bạn chỉ cần đặt một tên tài khoản riêng ngắn gọn (nickname, tên thân mật hoặc số điện thoại) để hệ thống lưu giữ các mảnh ghép bạn đã thu thập.",
+    a: "Không cần! Bạn chỉ cần đặt một tên tài khoản riêng ngắn gọn (nickname hoặc tên thân mật) để hệ thống lưu giữ các mảnh ghép bạn đã thu thập.",
   },
   {
     q: "Khi gom đủ 4/4 mảnh ghép, tôi nhận quà bằng cách nào?",

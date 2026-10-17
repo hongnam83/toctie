@@ -1363,11 +1363,11 @@ export default function AdminPage() {
                           title="Chọn tất cả mã đang hiển thị"
                         />
                       </th>
-                      <th>Mã</th>
-                      <th>Trạng thái</th>
+                      <th className={styles.thCode}>Mã</th>
+                      <th className={styles.thStatus}>Trạng thái</th>
                       <th>Tài khoản sử dụng</th>
-                      <th>Thời gian dùng</th>
-                      <th>Thao tác</th>
+                      <th className={styles.thDate}>Thời gian dùng</th>
+                      <th className={styles.thActions}>Thao tác</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1388,10 +1388,10 @@ export default function AdminPage() {
                               onChange={() => handleToggleCode(c.code)}
                             />
                           </td>
-                          <td>
+                          <td className={styles.tdCode}>
                             <code className={styles.codeMonoLg}>{c.code}</code>
                           </td>
-                          <td>
+                          <td className={styles.tdStatus}>
                             {c.isUsed ? (
                               <span className={styles.badgeUsed}>Đã dùng</span>
                             ) : (
@@ -1399,7 +1399,7 @@ export default function AdminPage() {
                             )}
                           </td>
                           <td>{c.usedBy || "—"}</td>
-                          <td>
+                          <td className={styles.tdDate}>
                             {c.usedAt
                               ? new Date(c.usedAt).toLocaleDateString("vi-VN", {
                                   day: "2-digit",
@@ -1410,7 +1410,7 @@ export default function AdminPage() {
                                 })
                               : "—"}
                           </td>
-                          <td>
+                          <td className={styles.tdActions}>
                             <div className={styles.tableRowActions}>
                               <button
                                 type="button"
