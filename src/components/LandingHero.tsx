@@ -476,77 +476,104 @@ export default function LandingHero({ onOpenAuth }: Props) {
       </section>
     </div>
 
-      {/* ── Section A: Hành Trình 4 Mảnh Ghép ── */}
+      {/* ── Section A: Quy trình nhận thưởng ── */}
       <section className={styles.journeySection} id="hanh-trinh">
+        {/* Soft atmospheric gradient glows */}
+        <div className={styles.journeyGlowBlob1} aria-hidden="true" />
+        <div className={styles.journeyGlowBlob2} aria-hidden="true" />
+
         <div className={styles.sectionContainer}>
-          <div className={styles.sectionHeadingBox}>
-            <span className={styles.sectionPill}>3 bước dễ dàng</span>
-            <h2 className={styles.sectionTitle}>Quy trình nhận thưởng</h2>
-            <p className={styles.sectionSubtitle}>
-              Chỉ với 3 bước chạm, bạn sẽ hoàn thiện bức tranh quà tặng bí mật cùng tóc.tie
-            </p>
-          </div>
+          <div className={styles.journeyMasterCard}>
+            <div className={styles.journeyHeaderBox}>
+              <span className={styles.sectionPill}>3 bước dễ dàng</span>
+              <h2 className={styles.sectionTitle}>Quy trình nhận thưởng</h2>
+              <p className={styles.sectionSubtitle}>
+                Chỉ với 3 bước chạm, bạn sẽ hoàn thiện bức tranh quà tặng bí mật cùng tóc.tie
+              </p>
+            </div>
 
-          <div className={styles.journeyGrid}>
-            {/* Step 01 */}
-            <div className={styles.journeyCard}>
-              <div className={styles.journeyHeaderRow}>
-                <span className={styles.journeyStepNumber}>01</span>
-                <div className={styles.journeyIconBox}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1E2D6B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-                    <line x1="3" y1="6" x2="21" y2="6" />
-                    <path d="M16 10a4 4 0 0 1-8 0" />
-                  </svg>
+            <div className={styles.journeyGrid}>
+              {/* Step 01 */}
+              <div className={styles.journeyStepCard}>
+                <div className={styles.journeyHeaderRow}>
+                  <span className={styles.journeyStepNumber}>01</span>
+                  <div className={styles.journeyIconBox}>
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1E2D6B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                      <line x1="3" y1="6" x2="21" y2="6" />
+                      <path d="M16 10a4 4 0 0 1-8 0" />
+                    </svg>
+                  </div>
+                </div>
+                <h3 className={styles.journeyCardTitle}>01 — Chọn sản phẩm tóc.tie</h3>
+                <p className={styles.journeyCardDesc}>
+                  Mua set quà hoặc sản phẩm phụ kiện tại tiệm tóc.tie để nhận mã dự thưởng độc quyền in bên trong hộp hoặc gửi kèm thiệp đơn hàng.
+                </p>
+                <div className={styles.journeyTag}>
+                  <span>Nhận mã dự thưởng</span>
                 </div>
               </div>
-              <h3 className={styles.journeyCardTitle}>01 — Chọn sản phẩm</h3>
-              <p className={styles.journeyCardDesc}>
-                Mua sản phẩm tóc.tie và nhận mã dự thưởng độc quyền in kèm thiệp hoặc trên hộp quà dịp 20/10.
-              </p>
-              <div className={styles.journeyTag}>
-                <span>Nhận mã dự thưởng</span>
+
+              {/* Step 02 */}
+              <div className={styles.journeyStepCard}>
+                <div className={styles.journeyHeaderRow}>
+                  <span className={styles.journeyStepNumber}>02</span>
+                  <div className={styles.journeyIconBox}>
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1E2D6B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="8" cy="15" r="4" />
+                      <path d="M10.85 12.15L19 4M18 5l2 2M15 8l2 2" />
+                    </svg>
+                  </div>
+                </div>
+                <h3 className={styles.journeyCardTitle}>02 — Khám phá mảnh ghép</h3>
+                <p className={styles.journeyCardDesc}>
+                  Nhập mã để mở khóa một mảnh ghép bí ẩn. Thuật toán tự động lựa chọn ngẫu nhiên một góc còn khóa, bảo đảm không bị trùng.
+                </p>
+                <div className={styles.journeyTag}>
+                  <span>Mở góc ngẫu nhiên</span>
+                </div>
+              </div>
+
+              {/* Step 03 */}
+              <div className={styles.journeyStepCard}>
+                <div className={styles.journeyHeaderRow}>
+                  <span className={styles.journeyStepNumber}>03</span>
+                  <div className={styles.journeyIconBox}>
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1E2D6B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="8" width="18" height="13" rx="2" />
+                      <path d="M12 8v13M3 13h18M7.5 8a2.5 2.5 0 0 1 0-5A4.5 4.5 0 0 1 12 8a4.5 4.5 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5" />
+                    </svg>
+                  </div>
+                </div>
+                <h3 className={styles.journeyCardTitle}>03 — Hoàn thành bộ sưu tập</h3>
+                <p className={styles.journeyCardDesc}>
+                  Thu thập đủ 4 mảnh ghép để mở khóa toàn bộ bức tranh bí mật và nhận phần quà tri ân đặc biệt từ tóc.tie dành tặng người phụ nữ bạn yêu thương.
+                </p>
+                <div className={styles.journeyTag}>
+                  <span>Mở trọn vẹn quà tặng</span>
+                </div>
               </div>
             </div>
 
-            {/* Step 02 */}
-            <div className={styles.journeyCard}>
-              <div className={styles.journeyHeaderRow}>
-                <span className={styles.journeyStepNumber}>02</span>
-                <div className={styles.journeyIconBox}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1E2D6B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="8" cy="15" r="4" />
-                    <path d="M10.85 12.15L19 4M18 5l2 2M15 8l2 2" />
-                  </svg>
+            {/* Section A Bottom Callout Bar */}
+            <div className={styles.journeyBottomBanner}>
+              <div className={styles.bannerLeftRow}>
+                <span className={styles.bannerIconBox}>🎁</span>
+                <div className={styles.bannerTextBox}>
+                  <strong>Bạn đã có mã dự thưởng từ đơn hàng tóc.tie?</strong>
+                  <p>Nhập mã ngay để giải mã góc tranh bí mật đầu tiên và lưu lại tiến độ mở quà!</p>
                 </div>
               </div>
-              <h3 className={styles.journeyCardTitle}>02 — Khám phá mảnh ghép</h3>
-              <p className={styles.journeyCardDesc}>
-                Nhập mã để mở khóa một mảnh ghép bí ẩn. Hệ thống tự động chọn ngẫu nhiên một góc chưa mở, không bị trùng.
-              </p>
-              <div className={styles.journeyTag}>
-                <span>Mở góc ngẫu nhiên</span>
-              </div>
-            </div>
-
-            {/* Step 03 */}
-            <div className={styles.journeyCard}>
-              <div className={styles.journeyHeaderRow}>
-                <span className={styles.journeyStepNumber}>03</span>
-                <div className={styles.journeyIconBox}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1E2D6B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="8" width="18" height="13" rx="2" />
-                    <path d="M12 8v13M3 13h18M7.5 8a2.5 2.5 0 0 1 0-5A4.5 4.5 0 0 1 12 8a4.5 4.5 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5" />
-                  </svg>
-                </div>
-              </div>
-              <h3 className={styles.journeyCardTitle}>03 — Hoàn thành bộ sưu tập</h3>
-              <p className={styles.journeyCardDesc}>
-                Thu thập đủ 4 mảnh để khám phá phần thưởng đặc biệt từ tóc.tie và lưu giữ kỷ niệm cho người thương.
-              </p>
-              <div className={styles.journeyTag}>
-                <span>Mở trọn vẹn quà tặng</span>
-              </div>
+              <button
+                className={`btn btn-primary ${styles.bannerCtaBtn}`}
+                onClick={onOpenAuth}
+                type="button"
+              >
+                <span>Nhập mã nhận thưởng ngay</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
             </div>
           </div>
         </div>
@@ -554,12 +581,18 @@ export default function LandingHero({ onOpenAuth }: Props) {
 
       {/* ── Section B: Món Quà Đang Chờ Được Bật Mí ── */}
       <section className={styles.mysterySection} id="qua-tang">
+        <div className={styles.mysteryGlowBlob} aria-hidden="true" />
         <div className={styles.sectionContainer}>
           <div className={styles.mysteryCard}>
             <div className={styles.mysteryVisual}>
+              {/* Floating Gift Badges */}
+              <div className={styles.floatingGiftBadgeTop}>
+                <span>🌸</span>
+                <span>Hộp quà thắt nơ</span>
+              </div>
               <div className={styles.giftBoxIllustration}>
                 {/* Handcrafted Gift Box SVG */}
-                <svg width="220" height="220" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <svg width="240" height="240" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <defs>
                     <radialGradient id="giftGlow" cx="50%" cy="50%" r="50%">
                       <stop offset="0%" stopColor="#FFF3C4" stopOpacity="0.8" />
@@ -586,6 +619,10 @@ export default function LandingHero({ onOpenAuth }: Props) {
                   <circle cx="160" cy="50" r="5" fill="#F4C5D3" stroke="#1E2D6B" strokeWidth="1.5" />
                 </svg>
               </div>
+              <div className={styles.floatingGiftBadgeBottom}>
+                <span>💝</span>
+                <span>100% Quà tặng độc quyền</span>
+              </div>
             </div>
 
             <div className={styles.mysteryContent}>
@@ -602,32 +639,60 @@ export default function LandingHero({ onOpenAuth }: Props) {
                 cho dịp Ngày Phụ nữ Việt Nam 20/10. Dù là chiếc scrunchie lụa dịu êm hay set quà xinh xắn,
                 mỗi phần quà đều được gửi gắm lời chúc hạnh phúc trọn vẹn nhất.
               </p>
+
               <div className={styles.mysteryHighlights}>
                 <div className={styles.mysteryPoint}>
                   <div className={styles.mysteryPointIconBox}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1E2D6B" strokeWidth="2" strokeLinecap="round">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1E2D6B" strokeWidth="2" strokeLinecap="round">
                       <rect x="3" y="8" width="18" height="13" rx="2" />
                       <path d="M12 8v13M3 13h18M7.5 8a2.5 2.5 0 0 1 0-5A4.5 4.5 0 0 1 12 8a4.5 4.5 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5" />
                     </svg>
                   </div>
                   <div>
-                    <strong>Quà tặng giới hạn</strong>
-                    <p>Dành riêng cho khách hàng hoàn tất 4 mảnh</p>
+                    <strong>Quà tặng giới hạn 20/10</strong>
+                    <p>Dành riêng cho khách hàng hoàn tất đủ 4 mảnh ghép</p>
                   </div>
                 </div>
+
                 <div className={styles.mysteryPoint}>
                   <div className={styles.mysteryPointIconBox}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1E2D6B" strokeWidth="2" strokeLinecap="round">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1E2D6B" strokeWidth="2" strokeLinecap="round">
                       <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                       <polyline points="22,6 12,13 2,6" />
                     </svg>
                   </div>
                   <div>
                     <strong>Thiệp chúc ý nghĩa</strong>
-                    <p>Kèm lời nhắn gửi yêu thương đến người nhận</p>
+                    <p>Kèm lời nhắn gửi yêu thương viết tay đến người nhận</p>
+                  </div>
+                </div>
+
+                <div className={styles.mysteryPoint}>
+                  <div className={styles.mysteryPointIconBox}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1E2D6B" strokeWidth="2" strokeLinecap="round">
+                      <circle cx="12" cy="12" r="9" />
+                      <path d="M12 3a9 9 0 0 0 0 18" fill="#F4C5D3" />
+                    </svg>
+                  </div>
+                  <div>
+                    <strong>Phụ kiện lụa cao cấp</strong>
+                    <p>Scrunchie & kẹp nơ bồng bềnh, êm ái bảo vệ mái tóc</p>
+                  </div>
+                </div>
+
+                <div className={styles.mysteryPoint}>
+                  <div className={styles.mysteryPointIconBox}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1E2D6B" strokeWidth="2" strokeLinecap="round">
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                    </svg>
+                  </div>
+                  <div>
+                    <strong>Đóng gói kraft chỉn chu</strong>
+                    <p>Hộp quà thắt nơ ruy băng kèm rơm lót hoa khô tinh tế</p>
                   </div>
                 </div>
               </div>
+
               <button
                 className={`btn btn-primary ${styles.mysteryCta}`}
                 onClick={onOpenAuth}
@@ -644,6 +709,7 @@ export default function LandingHero({ onOpenAuth }: Props) {
 
       {/* ── Section C: Về tóc.tie & Món Quà Cho Người Thương ── */}
       <section className={styles.brandStorySection} id="cau-chuyen">
+        <div className={styles.storyGlowBlob} aria-hidden="true" />
         <div className={styles.sectionContainer}>
           <div className={styles.storyGrid}>
             <div className={styles.storyTextCol}>
@@ -663,7 +729,7 @@ export default function LandingHero({ onOpenAuth }: Props) {
               <div className={styles.valuesList}>
                 <div className={styles.valueItem}>
                   <div className={styles.valueIconBox}>
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1E2D6B" strokeWidth="2" strokeLinecap="round">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1E2D6B" strokeWidth="2" strokeLinecap="round">
                       <circle cx="12" cy="12" r="9" />
                       <path d="M12 3a9 9 0 0 0 0 18" fill="#F4C5D3" />
                       <path d="M12 7c2 2 3 4 3 5s-1 3-3 3" />
@@ -671,29 +737,31 @@ export default function LandingHero({ onOpenAuth }: Props) {
                   </div>
                   <div>
                     <strong>Chất liệu êm ái cho mái tóc</strong>
-                    <p>Lụa mềm, voan cao cấp, không làm gãy rụng tóc nàng</p>
+                    <p>Lụa mềm, voan cao cấp tuyển chọn, không gây gãy rụng hay đau tóc nàng</p>
                   </div>
                 </div>
+
                 <div className={styles.valueItem}>
                   <div className={styles.valueIconBox}>
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1E2D6B" strokeWidth="2" strokeLinecap="round">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1E2D6B" strokeWidth="2" strokeLinecap="round">
                       <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                     </svg>
                   </div>
                   <div>
                     <strong>Đóng gói tỉ mỉ & chỉn chu</strong>
-                    <p>Hộp quà kraft, rơm lót hoa và thiệp viết tay xinh xắn</p>
+                    <p>Hộp quà kraft, rơm lót hoa khô và thiệp viết tay xinh xắn gửi gắm tâm tình</p>
                   </div>
                 </div>
+
                 <div className={styles.valueItem}>
                   <div className={styles.valueIconBox}>
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1E2D6B" strokeWidth="2" strokeLinecap="round">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1E2D6B" strokeWidth="2" strokeLinecap="round">
                       <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
                     </svg>
                   </div>
                   <div>
                     <strong>tie your happiness</strong>
-                    <p>Buộc lại niềm vui và sự ân cần trong từng khoảnh khắc</p>
+                    <p>Buộc lại niềm vui, sự ân cần và hạnh phúc trọn vẹn trong từng khoảnh khắc</p>
                   </div>
                 </div>
               </div>
@@ -702,7 +770,7 @@ export default function LandingHero({ onOpenAuth }: Props) {
             {/* Story Visual Badge Frame */}
             <div className={styles.storyVisualCol}>
               <div className={styles.storyCardFrame}>
-                <TocTieLogo size={88} className={styles.storyLogo} />
+                <TocTieLogo size={96} className={styles.storyLogo} />
                 <div className={styles.storyCardTitle}>tóc.tie</div>
                 <div className={styles.storyCardSlogan}>tie your happiness</div>
                 <div className={styles.storyCardBadges}>
@@ -713,50 +781,96 @@ export default function LandingHero({ onOpenAuth }: Props) {
                 <div className={styles.storyQuote}>
                   “Mỗi chiếc nơ buộc là một lời nhắn nhủ: Nàng xứng đáng được nâng niu mỗi ngày.”
                 </div>
+                <a
+                  href="https://www.facebook.com/toc.tie26"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.storyFbBtn}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                  </svg>
+                  <span>Ghé thăm Fanpage tóc.tie</span>
+                </a>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── Section D: Bạn Muốn Biết Thêm? (FAQ Accordion) ── */}
+      {/* ── Section D: Bạn Muốn Biết Thêm? (FAQ 2-Column Showcase) ── */}
       <section className={styles.faqSection} id="faq">
+        <div className={styles.faqGlowBlob} aria-hidden="true" />
         <div className={styles.sectionContainer}>
-          <div className={styles.sectionHeadingBox}>
-            <span className={styles.sectionPill}>Giải đáp thắc mắc</span>
-            <h2 className={styles.sectionTitle}>Bạn muốn biết thêm?</h2>
-            <p className={styles.sectionSubtitle}>
-              Mọi điều bạn cần biết về chương trình thu thập 4 mảnh ghép và nhận quà 20/10
-            </p>
-          </div>
+          <div className={styles.faqTwoColGrid}>
+            {/* Left FAQ Support Column */}
+            <div className={styles.faqSideCol}>
+              <div className={styles.faqSideHeadingBox}>
+                <span className={styles.sectionPill}>Giải đáp thắc mắc</span>
+                <h2 className={styles.sectionTitle}>Bạn muốn biết thêm?</h2>
+                <p className={styles.sectionSubtitle}>
+                  Mọi điều bạn cần biết về chương trình thu thập 4 mảnh ghép và nhận quà tri ân ngày 20/10 cùng tóc.tie.
+                </p>
+              </div>
 
-          <div className={styles.faqList}>
-            {FAQ_ITEMS.map((item, idx) => {
-              const isOpen = openFaq === idx;
-              return (
-                <div
-                  key={idx}
-                  className={`${styles.faqCard} ${isOpen ? styles.faqCardOpen : ""}`}
-                >
-                  <button
-                    className={styles.faqQuestionBtn}
-                    onClick={() => toggleFaq(idx)}
-                    aria-expanded={isOpen}
-                  >
-                    <span className={styles.faqQuestionText}>
-                      <span className={styles.faqQuestionDot} />
-                      {item.q}
-                    </span>
-                    <span className={styles.faqToggleIcon}>{isOpen ? "−" : "+"}</span>
-                  </button>
-                  {isOpen && (
-                    <div className={styles.faqAnswer}>
-                      <p>{item.a}</p>
-                    </div>
-                  )}
+              {/* Support Callout Card */}
+              <div className={styles.faqSupportCard}>
+                <div className={styles.supportBadge}>
+                  <span>💬 Hỗ trợ trực tuyến</span>
                 </div>
-              );
-            })}
+                <h3 className={styles.supportTitle}>Bạn vẫn còn câu hỏi khác?</h3>
+                <p className={styles.supportText}>
+                  Đội ngũ tóc.tie luôn sẵn sàng lắng nghe và hỗ trợ bạn xác thực mã nhận thưởng trong vòng 5 phút qua Fanpage.
+                </p>
+                <a
+                  href="https://www.facebook.com/toc.tie26"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.supportBtn}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                  </svg>
+                  <span>Nhắn tin Fanpage tóc.tie</span>
+                </a>
+                <div className={styles.supportStatusRow}>
+                  <span className={styles.supportDot} />
+                  <span>Trực tuyến hỗ trợ 24/7 suốt mùa 20/10</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Right FAQ Accordion Column */}
+            <div className={styles.faqListCol}>
+              <div className={styles.faqList}>
+                {FAQ_ITEMS.map((item, idx) => {
+                  const isOpen = openFaq === idx;
+                  return (
+                    <div
+                      key={idx}
+                      className={`${styles.faqCard} ${isOpen ? styles.faqCardOpen : ""}`}
+                    >
+                      <button
+                        className={styles.faqQuestionBtn}
+                        onClick={() => toggleFaq(idx)}
+                        aria-expanded={isOpen}
+                      >
+                        <span className={styles.faqQuestionText}>
+                          <span className={styles.faqQuestionDot} />
+                          {item.q}
+                        </span>
+                        <span className={styles.faqToggleIcon}>{isOpen ? "−" : "+"}</span>
+                      </button>
+                      {isOpen && (
+                        <div className={styles.faqAnswer}>
+                          <p>{item.a}</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
       </section>
