@@ -25,7 +25,6 @@ export default function PuzzleDashboard({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
-  const [showDemoBanner, setShowDemoBanner] = useState(true);
 
   const pieceCount = user.unlockedPieces.length;
   const isComplete = pieceCount === 4;
@@ -144,36 +143,6 @@ export default function PuzzleDashboard({
           </a>
         </div>
       </header>
-
-      {/* ── Demo Testing Banner ── */}
-      {showDemoBanner && (
-        <div className={styles.demoBanner}>
-          <div className={styles.demoBannerContent}>
-            <span className={styles.demoBadgeText}>DEMO:</span>
-            <span className={styles.demoBannerText}>
-              Bấm vào một mã thử nghiệm để tự động điền —{" "}
-              {["TOCTIE-2010-AAAA", "TOCTIE-2010-BBBB", "TOCTIE-2010-CCCC", "TOCTIE-2010-DDDD"].map((c) => (
-                <code
-                  key={c}
-                  className={styles.demoBannerCode}
-                  onClick={() => setCode(c)}
-                  title="Bấm để điền mã này vào ô nhập"
-                >
-                  {c}
-                </code>
-              ))}
-            </span>
-          </div>
-          <button
-            className={styles.demoBannerClose}
-            onClick={() => setShowDemoBanner(false)}
-            aria-label="Đóng banner demo"
-            type="button"
-          >
-            ✕
-          </button>
-        </div>
-      )}
 
       {/* ── Main Dashboard Workspace ── */}
       <main className={styles.main}>

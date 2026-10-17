@@ -279,7 +279,6 @@ function PieceArtwork({ pieceIndex }: { pieceIndex: number }) {
 
 // ── Locked Piece with Warm Hand-drawn Craft & Ribbon Padlock ──
 function LockedPiece({ pieceIndex }: { pieceIndex: number }) {
-  const info = PIECE_INFO[pieceIndex];
   return (
     <div className={styles.lockedInner}>
       {/* Stitch border */}
@@ -307,7 +306,6 @@ function LockedPiece({ pieceIndex }: { pieceIndex: number }) {
 
       <div className={styles.lockPieceMeta}>
         <span className={styles.lockPieceIndex}>Mảnh {pieceIndex + 1}</span>
-        <span className={styles.lockPieceName}>{info.name}</span>
       </div>
 
       <div className={styles.lockPieceTag}>

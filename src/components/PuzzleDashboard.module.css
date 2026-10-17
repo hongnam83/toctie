@@ -540,10 +540,6 @@
     flex-wrap: wrap;
   }
 
-  .demoBanner {
-    padding: 10px 16px;
-  }
-
   .userInfo {
     display: none;
   }
