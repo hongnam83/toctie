@@ -43,8 +43,9 @@ export default function LandingHero({ onOpenAuth }: Props) {
       {/* Background delicate stripes */}
       <div className={styles.stripeBg} aria-hidden="true" />
 
-      {/* ── Top Header ── */}
-      <header className={styles.header}>
+      {/* ── Top Header & Hero Screen ── */}
+      <div className={styles.heroWrapper}>
+        <header className={styles.header}>
         <div className={styles.headerLeft}>
           <TocTieLogo size={48} />
           <div className={styles.brandTitleBox}>
@@ -273,6 +274,7 @@ export default function LandingHero({ onOpenAuth }: Props) {
           </div>
         </div>
       </section>
+    </div>
 
       {/* ── Section A: Hành Trình 4 Mảnh Ghép ── */}
       <section className={styles.journeySection}>
