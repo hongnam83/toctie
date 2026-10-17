@@ -16,6 +16,7 @@ import {
   updateUser,
   deleteUser,
   findUserByName,
+  clearAllUsers,
 } from "@/lib/db";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET || "toctie1234";
@@ -150,6 +151,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         success: true,
         message: "Đã xóa tài khoản khách hàng thành công.",
+      });
+    }
+
+    // ACTION: Clear / Delete all customer accounts (Xóa tất cả tài khoản)
+    if (body.action === "clear-all-users" || body.action === "delete-all-users") {
+      await clearAllUsers();
+      return NextResponse.json({
+        success: true,
+        message: "Đã xóa toàn bộ tài khoản người dùng và làm mới hệ thống thành công.",
       });
     }
 

@@ -15,9 +15,10 @@ import {
   DEFAULT_DEMO_CODES,
   readUsersFromFile,
   REGISTERED_CUSTOMERS_FILE,
+  clearAllUsers,
 } from "./store";
 
-export { simpleHash, generateId, persistStore, pushCloudStore, pullCloudStore };
+export { simpleHash, generateId, persistStore, pushCloudStore, pullCloudStore, clearAllUsers };
 export type { User, RedemptionCode };
 
 let isSupabaseAvailable: boolean | null = null;

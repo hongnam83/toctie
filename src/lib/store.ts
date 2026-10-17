@@ -76,49 +76,8 @@ export const DEFAULT_DEMO_CODES = [
   "toctie-Z8F2W",
 ];
 
-// Permanent baseline registered customers (guarantees zero-wipe under any circumstance)
-export const PERMANENT_CUSTOMER_SEEDS: User[] = [
-  {
-    id: "lb00yyh44vmv9p52ov",
-    fullName: "ngoc_anh_2010",
-    passwordHash: "passwordless",
-    createdAt: "2026-10-15T15:31:25.279Z",
-    unlockedPieces: [2],
-    redeemedCodes: ["TOCTIE-2010-BBBB"],
-  },
-  {
-    id: "o1andxanbumv9qwhku",
-    fullName: "mai_phuong_99",
-    passwordHash: "passwordless",
-    createdAt: "2026-10-15T16:20:43.902Z",
-    unlockedPieces: [],
-    redeemedCodes: [],
-  },
-  {
-    id: "yn9c11s9oaqmv9s01jb",
-    fullName: "thuy_tien_2010",
-    passwordHash: "passwordless",
-    createdAt: "2026-10-15T16:51:29.351Z",
-    unlockedPieces: [],
-    redeemedCodes: [],
-  },
-  {
-    id: "0vevjself2qmv9skpoz",
-    fullName: "test_brand_check",
-    passwordHash: "passwordless",
-    createdAt: "2026-10-15T17:07:33.779Z",
-    unlockedPieces: [],
-    redeemedCodes: [],
-  },
-  {
-    id: "fviy478i4qumv9tr5pn",
-    fullName: "LanAnh",
-    passwordHash: "passwordless",
-    createdAt: "2026-10-15T17:40:34.091Z",
-    unlockedPieces: [],
-    redeemedCodes: [],
-  },
-];
+// Baseline customer seeds (starts clean, future registered customers are permanently saved to registered_customers.json)
+export const PERMANENT_CUSTOMER_SEEDS: User[] = [];
 
 function ensureDir(dir: string) {
   try {
@@ -242,12 +201,12 @@ export function readStoreFromFile(
 /**
  * Push current store snapshot to Supabase Cloud Storage (ensures data survives across serverless containers on Vercel)
  */
-export async function pushCloudStore(): Promise<boolean> {
+export async function pushCloudStore(allowEmpty: boolean = true): Promise<boolean> {
   try {
     if (!global.__toctieStore) return false;
 
     const userList = Array.from(global.__toctieStore.users.values());
-    if (userList.length === 0) return false;
+    if (!allowEmpty && userList.length === 0) return false;
 
     const dataToSave = {
       users: userList,
@@ -330,7 +289,7 @@ export async function pullCloudStore(): Promise<boolean> {
 /**
  * Persist store across all physical storage tiers with Anti-Wipe Protection
  */
-export function persistStore() {
+export function persistStore(allowEmpty: boolean = false) {
   try {
     if (!global.__toctieStore) return;
 
@@ -338,12 +297,11 @@ export function persistStore() {
     const codeList = Array.from(global.__toctieStore.codes.values());
 
     // CRITICAL ANTI-WIPE SHIELD:
-    // If memory somehow has 0 users, NEVER wipe the disk!
-    if (userList.length === 0) {
+    // If memory somehow has 0 users and empty is not explicitly permitted, attempt recovery from disk
+    if (!allowEmpty && userList.length === 0) {
       console.warn(
-        "CẢNH BÁO: Bộ nhớ phát hiện 0 người dùng! Từ chối ghi đè file để bảo vệ dữ liệu khách hàng."
+        "CẢNH BÁO: Bộ nhớ phát hiện 0 người dùng! Khôi phục từ file đăng ký để bảo vệ dữ liệu khách hàng."
       );
-      // Attempt immediate recovery from permanent files
       const recovered = readUsersFromFile(REGISTERED_CUSTOMERS_FILE);
       if (recovered.length > 0) {
         recovered.forEach((u) =>
@@ -353,16 +311,8 @@ export function persistStore() {
             global.__toctieStore!.usersByName
           )
         );
-      } else {
-        PERMANENT_CUSTOMER_SEEDS.forEach((u) =>
-          mergeUserIntoMap(
-            u,
-            global.__toctieStore!.users,
-            global.__toctieStore!.usersByName
-          )
-        );
+        userList = Array.from(global.__toctieStore.users.values());
       }
-      userList = Array.from(global.__toctieStore.users.values());
     }
 
     const usersJsonStr = JSON.stringify(userList, null, 2);
@@ -394,9 +344,58 @@ export function persistStore() {
     }
 
     // 3. Asynchronously push snapshot to Supabase Cloud Storage
-    pushCloudStore().catch(() => {});
+    pushCloudStore(allowEmpty).catch(() => {});
   } catch (err) {
     console.error("Lỗi khi lưu dữ liệu cửa hàng:", err);
+  }
+}
+
+/**
+ * Permanently delete all registered customer accounts across all storage tiers
+ */
+export async function clearAllUsers(): Promise<void> {
+  const store = getStore();
+  store.users.clear();
+  store.usersByName.clear();
+
+  // Reset all 20 fixed codes to unused and remove any legacy codes
+  const validFixedCodes = new Set(DEFAULT_DEMO_CODES.map((c) => c.toUpperCase()));
+  for (const [codeKey, codeObj] of Array.from(store.codes.entries())) {
+    if (!validFixedCodes.has(codeKey)) {
+      store.codes.delete(codeKey);
+    } else {
+      codeObj.isUsed = false;
+      codeObj.usedBy = undefined;
+      codeObj.usedAt = undefined;
+    }
+  }
+
+  // Ensure all 20 fixed codes exist
+  DEFAULT_DEMO_CODES.forEach((code) => {
+    const upper = code.toUpperCase();
+    if (!store.codes.has(upper)) {
+      store.codes.set(upper, {
+        code,
+        isUsed: false,
+      });
+    }
+  });
+
+  // Save empty customer list across disk, backup, and tmp files
+  persistStore(true);
+
+  // Push clean empty users snapshot to Supabase Cloud Storage
+  await pushCloudStore(true).catch(() => {});
+
+  // Delete all users in Supabase PostgreSQL table if connected
+  try {
+    await supabaseAdmin.from("users").delete().neq("id", "none");
+    await supabaseAdmin
+      .from("redemption_codes")
+      .update({ is_used: false, used_by: null, used_at: null })
+      .neq("code", "none");
+  } catch {
+    // ignore
   }
 }
 
