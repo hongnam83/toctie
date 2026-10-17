@@ -1,12 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import styles from "./LandingHero.module.css";
 import TocTieLogo from "@/components/TocTieLogo";
 
 interface Props {
   onOpenAuth: () => void;
 }
+
+const NAV_ITEMS = [
+  { id: "trang-chu", label: "Trang chủ" },
+  { id: "hanh-trinh", label: "Hành trình" },
+  { id: "qua-tang", label: "Quà tặng 20/10" },
+  { id: "cau-chuyen", label: "Về tóc.tie" },
+  { id: "faq", label: "Hỏi & Đáp" },
+];
 
 const FAQ_ITEMS = [
   {
@@ -33,6 +41,44 @@ const FAQ_ITEMS = [
 
 export default function LandingHero({ onOpenAuth }: Props) {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [activeSection, setActiveSection] = useState<string>("trang-chu");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Active section scroll spy
+  useEffect(() => {
+    const handleScroll = () => {
+      const sectionIds = ["trang-chu", "hanh-trinh", "qua-tang", "cau-chuyen", "faq"];
+      const scrollPosition = window.scrollY + 140;
+
+      for (let i = sectionIds.length - 1; i >= 0; i--) {
+        const el = document.getElementById(sectionIds[i]);
+        if (el) {
+          const top = el.offsetTop;
+          if (scrollPosition >= top) {
+            setActiveSection(sectionIds[i]);
+            break;
+          }
+        }
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const handleNavClick = (id: string) => {
+    setActiveSection(id);
+    setMobileMenuOpen(false);
+    if (id === "trang-chu") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth" });
+    }
+  };
 
   const toggleFaq = (index: number) => {
     setOpenFaq(openFaq === index ? null : index);
@@ -43,46 +89,134 @@ export default function LandingHero({ onOpenAuth }: Props) {
       {/* Background delicate stripes */}
       <div className={styles.stripeBg} aria-hidden="true" />
 
-      {/* ── Top Header & Hero Screen ── */}
-      <div className={styles.heroWrapper}>
+      {/* ── Top Sticky Header with Navigation Menu ── */}
+      <div className={styles.headerWrapper}>
         <header className={styles.header}>
-        <div className={styles.headerLeft}>
-          <TocTieLogo size={48} />
-          <div className={styles.brandTitleBox}>
-            <span className={styles.brandName}>tóc.tie</span>
-            <span className={styles.slogan}>tie your happiness</span>
+          <div
+            className={styles.headerLeft}
+            onClick={() => handleNavClick("trang-chu")}
+            role="button"
+            tabIndex={0}
+            style={{ cursor: "pointer" }}
+            title="Về đầu trang tóc.tie"
+          >
+            <TocTieLogo size={46} />
+            <div className={styles.brandTitleBox}>
+              <span className={styles.brandName}>tóc.tie</span>
+              <span className={styles.slogan}>tie your happiness</span>
+            </div>
           </div>
-        </div>
 
-        <nav className={styles.headerNav}>
-          <a
-            href="https://www.facebook.com/toc.tie26"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.socialLink}
-            aria-label="Fanpage Facebook tóc.tie"
-          >
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-            </svg>
-            Facebook
-          </a>
-          <button
-            className={`btn btn-primary btn-sm ${styles.headerCta}`}
-            onClick={onOpenAuth}
-            id="nav-start-btn"
-          >
-            <span>Nhập mã ngay</span>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={styles.headerCtaArrow} aria-hidden="true">
-              <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-        </nav>
-      </header>
+          {/* Desktop Navigation Menu */}
+          <nav className={styles.desktopNav} aria-label="Menu điều hướng trang">
+            {NAV_ITEMS.map((item) => {
+              const isActive = activeSection === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={`${styles.navItem} ${isActive ? styles.navItemActive : ""}`}
+                  onClick={() => handleNavClick(item.id)}
+                  aria-current={isActive ? "page" : undefined}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Right Action Buttons */}
+          <div className={styles.headerNav}>
+            <a
+              href="https://www.facebook.com/toc.tie26"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.socialLink}
+              aria-label="Fanpage Facebook tóc.tie"
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+              </svg>
+              <span>Facebook</span>
+            </a>
+            <button
+              className={`btn btn-primary btn-sm ${styles.headerCta}`}
+              onClick={onOpenAuth}
+              id="nav-start-btn"
+            >
+              <span>Nhập mã ngay</span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={styles.headerCtaArrow} aria-hidden="true">
+                <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+
+            {/* Mobile Hamburger Button */}
+            <button
+              type="button"
+              className={styles.mobileMenuBtn}
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Mở danh mục trang web"
+              aria-expanded={mobileMenuOpen}
+            >
+              {mobileMenuOpen ? (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              ) : (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+                  <line x1="4" y1="6" x2="20" y2="6" />
+                  <line x1="4" y1="12" x2="20" y2="12" />
+                  <line x1="4" y1="18" x2="20" y2="18" />
+                </svg>
+              )}
+            </button>
+          </div>
+        </header>
+
+        {/* Mobile Dropdown Menu */}
+        {mobileMenuOpen && (
+          <div className={styles.mobileMenuDropdown}>
+            <div className={styles.mobileMenuList}>
+              {NAV_ITEMS.map((item) => {
+                const isActive = activeSection === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={`${styles.mobileMenuItem} ${isActive ? styles.mobileMenuItemActive : ""}`}
+                    onClick={() => handleNavClick(item.id)}
+                  >
+                    <span>{item.label}</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M9 18l6-6-6-6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                );
+              })}
+            </div>
+            <div className={styles.mobileMenuFooter}>
+              <button
+                className="btn btn-primary w-full"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onOpenAuth();
+                }}
+              >
+                <span>Nhập mã dự thưởng ngay</span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* ── Hero Section ── */}
-      <section className={styles.heroSection}>
-        <div className={styles.heroContainer}>
+      <div className={styles.heroWrapper} id="trang-chu">
+        <section className={styles.heroSection}>
+          <div className={styles.heroContainer}>
           {/* Left Column: Headlines & Call to Action */}
           <div className={styles.heroContent}>
             <h1 className={styles.mainHeadline}>
@@ -277,7 +411,7 @@ export default function LandingHero({ onOpenAuth }: Props) {
     </div>
 
       {/* ── Section A: Hành Trình 4 Mảnh Ghép ── */}
-      <section className={styles.journeySection}>
+      <section className={styles.journeySection} id="hanh-trinh">
         <div className={styles.sectionContainer}>
           <div className={styles.sectionHeadingBox}>
             <span className={styles.sectionPill}>Quy trình đơn giản</span>
@@ -353,7 +487,7 @@ export default function LandingHero({ onOpenAuth }: Props) {
       </section>
 
       {/* ── Section B: Món Quà Đang Chờ Được Bật Mí ── */}
-      <section className={styles.mysterySection}>
+      <section className={styles.mysterySection} id="qua-tang">
         <div className={styles.sectionContainer}>
           <div className={styles.mysteryCard}>
             <div className={styles.mysteryVisual}>
@@ -443,7 +577,7 @@ export default function LandingHero({ onOpenAuth }: Props) {
       </section>
 
       {/* ── Section C: Về tóc.tie & Món Quà Cho Người Thương ── */}
-      <section className={styles.brandStorySection}>
+      <section className={styles.brandStorySection} id="cau-chuyen">
         <div className={styles.sectionContainer}>
           <div className={styles.storyGrid}>
             <div className={styles.storyTextCol}>
@@ -520,7 +654,7 @@ export default function LandingHero({ onOpenAuth }: Props) {
       </section>
 
       {/* ── Section D: Bạn Muốn Biết Thêm? (FAQ Accordion) ── */}
-      <section className={styles.faqSection}>
+      <section className={styles.faqSection} id="faq">
         <div className={styles.sectionContainer}>
           <div className={styles.sectionHeadingBox}>
             <span className={styles.sectionPill}>Giải đáp thắc mắc</span>
