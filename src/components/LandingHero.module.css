@@ -5,7 +5,6 @@
   display: flex;
   flex-direction: column;
   position: relative;
-  overflow-x: hidden;
   background: var(--cream);
 }
 
@@ -24,11 +23,13 @@
   pointer-events: none;
 }
 
-/* ── Top Sticky Header with Navigation Menu ── */
+/* ── Top Fixed Header with Navigation Menu ── */
 .headerWrapper {
-  position: sticky;
+  position: fixed;
   top: 0;
-  z-index: 100;
+  left: 0;
+  right: 0;
+  z-index: 1000;
   width: 100%;
   background: rgba(250, 246, 238, 0.94);
   backdrop-filter: blur(14px);
@@ -247,15 +248,16 @@
 
 /* ── Hero Section (Full Viewport) ── */
 .heroWrapper {
-  min-height: calc(100vh - 68px);
-  min-height: calc(100dvh - 68px);
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding-top: 74px;
   display: flex;
   flex-direction: column;
   position: relative;
   z-index: 10;
   width: 100%;
   box-sizing: border-box;
-  scroll-margin-top: 68px;
+  scroll-margin-top: 74px;
   overflow: hidden;
 }
 
@@ -745,7 +747,7 @@
   background: var(--cream-soft);
   border-top: 2px solid var(--blue-light);
   border-bottom: 2px solid var(--blue-light);
-  scroll-margin-top: 68px;
+  scroll-margin-top: 74px;
   overflow: hidden;
 }
 
@@ -927,7 +929,7 @@
   justify-content: center;
   padding: 48px 0;
   box-sizing: border-box;
-  scroll-margin-top: 68px;
+  scroll-margin-top: 74px;
   overflow: hidden;
 }
 
@@ -1076,7 +1078,7 @@
   background: var(--cream-soft);
   border-top: 2px solid var(--blue-light);
   border-bottom: 2px solid var(--blue-light);
-  scroll-margin-top: 68px;
+  scroll-margin-top: 74px;
   overflow: hidden;
 }
 
@@ -1266,7 +1268,7 @@
   justify-content: center;
   padding: 48px 0;
   box-sizing: border-box;
-  scroll-margin-top: 68px;
+  scroll-margin-top: 74px;
   overflow: hidden;
 }
 
