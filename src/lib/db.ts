@@ -153,21 +153,7 @@ export async function findUserByName(fullName: string): Promise<User | null> {
   const normalized = fullName.trim();
   const lowerName = normalized.toLowerCase();
 
-  // 1. In-memory check (fastest)
-  const store = getStore();
-  let userId = store.usersByName.get(lowerName);
-  if (userId) {
-    const u = store.users.get(userId);
-    if (u) return u;
-  }
-
-  // 2. Direct atomic Cloud Storage lookup by Name
-  try {
-    const cloudUser = await pullUserFromCloud(lowerName);
-    if (cloudUser) return cloudUser;
-  } catch {}
-
-  // 3. Supabase PostgreSQL check
+  // 1. Supabase PostgreSQL check (Primary cloud database across all containers)
   try {
     const { data, error } = await supabaseAdmin
       .from("users")
@@ -186,13 +172,27 @@ export async function findUserByName(fullName: string): Promise<User | null> {
         unlockedPieces: data.unlocked_pieces || [],
         redeemedCodes: data.redeemed_codes || [],
       };
+      const store = getStore();
       mergeUserIntoMap(u, store.users, store.usersByName);
-      persistStore();
       return u;
     }
   } catch {
     // Supabase unavailable, fall through
   }
+
+  // 2. In-memory check (fast fallback)
+  const store = getStore();
+  let userId = store.usersByName.get(lowerName);
+  if (userId) {
+    const u = store.users.get(userId);
+    if (u) return u;
+  }
+
+  // 3. Direct atomic Cloud Storage lookup by Name
+  try {
+    const cloudUser = await pullUserFromCloud(lowerName);
+    if (cloudUser) return cloudUser;
+  } catch {}
 
   // 4. Permanent disk file check (restores user even after server restart or dev rebuild)
   const diskUsers = readUsersFromFile(REGISTERED_CUSTOMERS_FILE);
@@ -221,19 +221,8 @@ export async function findUserByName(fullName: string): Promise<User | null> {
  */
 export async function findUserById(id: string): Promise<User | null> {
   const trimmedId = id.trim();
-  const store = getStore();
 
-  // 1. In-memory check
-  let user = store.users.get(trimmedId);
-  if (user) return user;
-
-  // 2. Direct atomic Cloud Storage lookup by ID
-  try {
-    const cloudUser = await pullUserFromCloud(trimmedId);
-    if (cloudUser) return cloudUser;
-  } catch {}
-
-  // 3. Supabase PostgreSQL check
+  // 1. Supabase PostgreSQL check (Primary cloud database across all containers)
   try {
     const { data, error } = await supabaseAdmin
       .from("users")
@@ -252,13 +241,24 @@ export async function findUserById(id: string): Promise<User | null> {
         unlockedPieces: data.unlocked_pieces || [],
         redeemedCodes: data.redeemed_codes || [],
       };
+      const store = getStore();
       mergeUserIntoMap(u, store.users, store.usersByName);
-      persistStore();
       return u;
     }
   } catch {
     // Fall through
   }
+
+  // 2. In-memory check
+  const store = getStore();
+  let user = store.users.get(trimmedId);
+  if (user) return user;
+
+  // 3. Direct atomic Cloud Storage lookup by ID
+  try {
+    const cloudUser = await pullUserFromCloud(trimmedId);
+    if (cloudUser) return cloudUser;
+  } catch {}
 
   // 4. Permanent disk file check
   const diskUsers = readUsersFromFile(REGISTERED_CUSTOMERS_FILE);
@@ -520,17 +520,8 @@ export async function redeemCode(
     };
   }
 
-  const store = getStore();
-  const memoryCode = store.codes.get(normalized);
-  if (memoryCode && memoryCode.isUsed) {
-    return {
-      success: false,
-      error: "Mã này đã được sử dụng rồi.",
-      unlockedPieces: user.unlockedPieces,
-    };
-  }
-
-  // Concurrency-safe atomic check in Supabase PostgreSQL (if table exists)
+  // 1. Concurrency-safe atomic check in Supabase PostgreSQL (Primary)
+  let postgresChecked = false;
   try {
     const { data: updatedCodeRows, error: codeErr } = await supabaseAdmin
       .from("redemption_codes")
@@ -543,16 +534,46 @@ export async function redeemCode(
       .eq("is_used", false)
       .select();
 
-    if (!codeErr && Array.isArray(updatedCodeRows) && updatedCodeRows.length === 0) {
-      // PostgreSQL table exists and update affected 0 rows -> code was already used concurrently
+    if (!codeErr && Array.isArray(updatedCodeRows)) {
+      postgresChecked = true;
+      if (updatedCodeRows.length === 0) {
+        // Table exists and update affected 0 rows -> check whether code is used or invalid
+        const { data: existingCode } = await supabaseAdmin
+          .from("redemption_codes")
+          .select("code, is_used, used_by")
+          .ilike("code", normalized)
+          .maybeSingle();
+
+        if (existingCode && existingCode.is_used) {
+          return {
+            success: false,
+            error: "Mã này đã được sử dụng rồi.",
+            unlockedPieces: user.unlockedPieces,
+          };
+        } else if (!existingCode) {
+          return {
+            success: false,
+            error: "Mã không hợp lệ. Vui lòng kiểm tra lại.",
+            unlockedPieces: user.unlockedPieces,
+          };
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("Supabase PostgreSQL update error in redeemCode:", err);
+  }
+
+  // 2. Fallback check on memory store only if PostgreSQL was unavailable
+  const store = getStore();
+  const memoryCode = store.codes.get(normalized);
+  if (!postgresChecked) {
+    if (memoryCode && memoryCode.isUsed) {
       return {
         success: false,
-        error: "Mã này vừa được sử dụng bởi một tài khoản khác.",
+        error: "Mã này đã được sử dụng rồi.",
         unlockedPieces: user.unlockedPieces,
       };
     }
-  } catch {
-    // Handled by memory/cloud storage
   }
 
   const updatedPieces = [...user.unlockedPieces, newPiece];
@@ -619,6 +640,9 @@ export async function getAdminData(): Promise<{
     ]);
 
     if (!usersRes.error && !codesRes.error && usersRes.data && codesRes.data) {
+      store.users.clear();
+      store.usersByName.clear();
+
       usersRes.data.forEach((u) => {
         const pieces = u.unlocked_pieces || [];
         const userObj: User = {
@@ -636,14 +660,12 @@ export async function getAdminData(): Promise<{
 
       codesRes.data.forEach((c) => {
         const upper = c.code.toUpperCase();
-        if (c.is_used || store.codes.has(upper)) {
-          store.codes.set(upper, {
-            code: upper,
-            isUsed: c.is_used,
-            usedBy: c.used_by,
-            usedAt: c.used_at,
-          });
-        }
+        store.codes.set(upper, {
+          code: upper,
+          isUsed: c.is_used,
+          usedBy: c.used_by || undefined,
+          usedAt: c.used_at || undefined,
+        });
       });
 
       persistStore();

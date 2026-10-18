@@ -466,22 +466,6 @@ export function persistStore(allowEmpty: boolean = false) {
     let userList = Array.from(global.__toctieStore.users.values());
     const codeList = Array.from(global.__toctieStore.codes.values());
 
-    // CRITICAL ANTI-WIPE SHIELD:
-    // If memory somehow has 0 users and empty is not explicitly permitted, attempt recovery from disk
-    if (!allowEmpty && userList.length === 0) {
-      const recovered = readUsersFromFile(REGISTERED_CUSTOMERS_FILE);
-      if (recovered.length > 0) {
-        recovered.forEach((u) =>
-          mergeUserIntoMap(
-            u,
-            global.__toctieStore!.users,
-            global.__toctieStore!.usersByName
-          )
-        );
-        userList = Array.from(global.__toctieStore.users.values());
-      }
-    }
-
     const usersJsonStr = JSON.stringify(userList, null, 2);
 
     const storeDataToSave = {
@@ -496,21 +480,11 @@ export function persistStore(allowEmpty: boolean = false) {
       ensureDir(DATA_DIR);
       fs.writeFileSync(REGISTERED_CUSTOMERS_FILE, usersJsonStr, "utf-8");
       fs.writeFileSync(STORE_FILE, storeJsonStr, "utf-8");
-      fs.writeFileSync(BACKUP_FILE, usersJsonStr, "utf-8");
     } catch (diskErr) {
       console.warn("Lỗi ghi disk store:", diskErr);
     }
 
-    // 2. Serverless fallback directory (/tmp)
-    try {
-      ensureDir(TMP_DATA_DIR);
-      fs.writeFileSync(TMP_REGISTERED_CUSTOMERS_FILE, usersJsonStr, "utf-8");
-      fs.writeFileSync(TMP_STORE_FILE, storeJsonStr, "utf-8");
-    } catch {
-      // ignore
-    }
-
-    // 3. Asynchronously push snapshot to Supabase Cloud Storage
+    // 2. Asynchronously push snapshot to Supabase Cloud Storage
     pushCloudStore(allowEmpty).catch(() => {});
   } catch (err) {
     console.error("Lỗi khi lưu dữ liệu cửa hàng:", err);
@@ -628,24 +602,6 @@ function initStore(): StoreState {
     storeData.users.forEach((u) => mergeUserIntoMap(u, usersMap, usersByNameMap));
     storeData.codes.forEach((c) => {
       codesMap.set(c.code.toUpperCase(), c);
-    });
-  }
-
-  // Tier 4: Backup file (data/customers_backup.json)
-  const backupUsers = readUsersFromFile(BACKUP_FILE);
-  backupUsers.forEach((u) => mergeUserIntoMap(u, usersMap, usersByNameMap));
-
-  // Tier 5: Serverless /tmp storage (for Vercel containers)
-  const tmpUsers = readUsersFromFile(TMP_REGISTERED_CUSTOMERS_FILE);
-  tmpUsers.forEach((u) => mergeUserIntoMap(u, usersMap, usersByNameMap));
-
-  const tmpStoreData = readStoreFromFile(TMP_STORE_FILE);
-  if (tmpStoreData) {
-    tmpStoreData.users.forEach((u) => mergeUserIntoMap(u, usersMap, usersByNameMap));
-    tmpStoreData.codes.forEach((c) => {
-      if (!codesMap.has(c.code.toUpperCase()) || c.isUsed) {
-        codesMap.set(c.code.toUpperCase(), c);
-      }
     });
   }
 
