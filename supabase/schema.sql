@@ -1,6 +1,8 @@
 -- ========================================================
--- TÓC TIE LOYALTY CAMPAIGN - SUPABASE DATABASE SCHEMA
+-- TÓC TIE LOYALTY CAMPAIGN - PRODUCTION SUPABASE SCHEMA
 -- ========================================================
+-- Chạy script này trong Supabase Dashboard -> SQL Editor
+-- Link: https://supabase.com/dashboard/project/ylydytwnzelogiwurxcl/sql/new
 
 -- 1. Bảng Khách Hàng (users)
 CREATE TABLE IF NOT EXISTS public.users (
@@ -11,14 +13,18 @@ CREATE TABLE IF NOT EXISTS public.users (
   password_hash TEXT NOT NULL,
   unlocked_pieces INT[] DEFAULT '{}',
   redeemed_codes TEXT[] DEFAULT '{}',
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  is_complete BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Bổ sung cột phone và note nếu bảng đã được tạo trước đó
+-- Đảm bảo các cột tồn tại nếu bảng đã được tạo trước đó
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS phone TEXT;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS note TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS is_complete BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 
--- 2. Bảng Mã Đổi Thưởng (redemption_codes)
+-- 2. Bảng Mã Dự Thưởng (redemption_codes)
 CREATE TABLE IF NOT EXISTS public.redemption_codes (
   code TEXT PRIMARY KEY,
   is_used BOOLEAN DEFAULT FALSE,
@@ -27,47 +33,47 @@ CREATE TABLE IF NOT EXISTS public.redemption_codes (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 3. Tạo chỉ mục tìm kiếm tối ưu
-CREATE INDEX IF NOT EXISTS idx_users_full_name ON public.users(full_name);
+-- 3. Tạo chỉ mục tìm kiếm tối ưu (Indexes)
+CREATE INDEX IF NOT EXISTS idx_users_full_name_lower ON public.users(LOWER(full_name));
 CREATE INDEX IF NOT EXISTS idx_users_phone ON public.users(phone);
 CREATE INDEX IF NOT EXISTS idx_codes_is_used ON public.redemption_codes(is_used);
 
--- 4. Bật Row Level Security (RLS)
+-- 4. Bật Row Level Security (RLS) & Phân quyền
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.redemption_codes ENABLE ROW LEVEL SECURITY;
 
--- Cho phép service_role toàn quyền truy cập (Backend Next.js Route Handlers sử dụng Service Role Key)
+-- Cấp quyền toàn phần cho service_role (Next.js Backend API Route Handlers)
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Service Role Full Access Users' AND tablename = 'users') THEN
-    CREATE POLICY "Service Role Full Access Users" ON public.users FOR ALL USING (true) WITH CHECK (true);
+    CREATE POLICY "Service Role Full Access Users" ON public.users FOR ALL TO service_role USING (true) WITH CHECK (true);
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Service Role Full Access Codes' AND tablename = 'redemption_codes') THEN
-    CREATE POLICY "Service Role Full Access Codes" ON public.redemption_codes FOR ALL USING (true) WITH CHECK (true);
+    CREATE POLICY "Service Role Full Access Codes" ON public.redemption_codes FOR ALL TO service_role USING (true) WITH CHECK (true);
   END IF;
 END $$;
 
--- 5. Nạp sẵn 20 mã dự thưởng khởi đầu cho chiến dịch 20/10
+-- 5. Nạp sẵn chính xác 20 mã dự thưởng cố định của chiến dịch
 INSERT INTO public.redemption_codes (code, is_used)
 VALUES
-  ('TOCTIE-2010-AAAA', false),
-  ('TOCTIE-2010-BBBB', false),
-  ('TOCTIE-2010-CCCC', false),
-  ('TOCTIE-2010-DDDD', false),
-  ('TOCTIE-2010-EEEE', false),
-  ('TOCTIE-2010-FFFF', false),
-  ('TOCTIE-2010-GGGG', false),
-  ('TOCTIE-2010-HHHH', false),
-  ('TOCTIE-2010-IIII', false),
-  ('TOCTIE-2010-JJJJ', false),
-  ('TOCTIE-2010-KKKK', false),
-  ('TOCTIE-2010-LLLL', false),
-  ('TOCTIE-2010-MMMM', false),
-  ('TOCTIE-2010-NNNN', false),
-  ('TOCTIE-2010-OOOO', false),
-  ('TOCTIE-2010-PPPP', false),
-  ('TOCTIE-2010-QQQQ', false),
-  ('TOCTIE-2010-RRRR', false),
-  ('TOCTIE-2010-SSSS', false),
-  ('TOCTIE-2010-TTTT', false)
+  ('TOCTIE-K7M9X', false),
+  ('TOCTIE-P4N8Q', false),
+  ('TOCTIE-R6T2W', false),
+  ('TOCTIE-H9B5Y', false),
+  ('TOCTIE-X3D7K', false),
+  ('TOCTIE-M8F2P', false),
+  ('TOCTIE-Q5L9R', false),
+  ('TOCTIE-T7C4N', false),
+  ('TOCTIE-B2W6H', false),
+  ('TOCTIE-Y9K3F', false),
+  ('TOCTIE-N4X8D', false),
+  ('TOCTIE-F6P2M', false),
+  ('TOCTIE-W3R7L', false),
+  ('TOCTIE-D8H5T', false),
+  ('TOCTIE-L2Q9B', false),
+  ('TOCTIE-C7Y4X', false),
+  ('TOCTIE-G5N8P', false),
+  ('TOCTIE-V9M3K', false),
+  ('TOCTIE-J4T6R', false),
+  ('TOCTIE-Z8F2W', false)
 ON CONFLICT (code) DO NOTHING;

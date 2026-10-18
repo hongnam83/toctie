@@ -37,7 +37,10 @@ interface AdminCode {
   usedAt?: string;
 }
 
-const SUPABASE_SCHEMA_SQL = `-- TÓC TIE LOYALTY - SUPABASE SCHEMA
+const SUPABASE_SCHEMA_SQL = `-- TÓC TIE LOYALTY - SUPABASE PRODUCTION SCHEMA
+-- Chạy script này trong Supabase Dashboard -> SQL Editor
+-- Link: https://supabase.com/dashboard/project/ylydytwnzelogiwurxcl/sql/new
+
 CREATE TABLE IF NOT EXISTS public.users (
   id TEXT PRIMARY KEY,
   full_name TEXT UNIQUE NOT NULL,
@@ -46,11 +49,15 @@ CREATE TABLE IF NOT EXISTS public.users (
   password_hash TEXT NOT NULL,
   unlocked_pieces INT[] DEFAULT '{}',
   redeemed_codes TEXT[] DEFAULT '{}',
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  is_complete BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS phone TEXT;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS note TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS is_complete BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 
 CREATE TABLE IF NOT EXISTS public.redemption_codes (
   code TEXT PRIMARY KEY,
@@ -60,7 +67,7 @@ CREATE TABLE IF NOT EXISTS public.redemption_codes (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_users_full_name ON public.users(full_name);
+CREATE INDEX IF NOT EXISTS idx_users_full_name_lower ON public.users(LOWER(full_name));
 CREATE INDEX IF NOT EXISTS idx_users_phone ON public.users(phone);
 CREATE INDEX IF NOT EXISTS idx_codes_is_used ON public.redemption_codes(is_used);
 
@@ -70,12 +77,36 @@ ALTER TABLE public.redemption_codes ENABLE ROW LEVEL SECURITY;
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Service Role Full Access Users' AND tablename = 'users') THEN
-    CREATE POLICY "Service Role Full Access Users" ON public.users FOR ALL USING (true) WITH CHECK (true);
+    CREATE POLICY "Service Role Full Access Users" ON public.users FOR ALL TO service_role USING (true) WITH CHECK (true);
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Service Role Full Access Codes' AND tablename = 'redemption_codes') THEN
-    CREATE POLICY "Service Role Full Access Codes" ON public.redemption_codes FOR ALL USING (true) WITH CHECK (true);
+    CREATE POLICY "Service Role Full Access Codes" ON public.redemption_codes FOR ALL TO service_role USING (true) WITH CHECK (true);
   END IF;
-END $$;`;
+END $$;
+
+INSERT INTO public.redemption_codes (code, is_used)
+VALUES
+  ('TOCTIE-K7M9X', false),
+  ('TOCTIE-P4N8Q', false),
+  ('TOCTIE-R6T2W', false),
+  ('TOCTIE-H9B5Y', false),
+  ('TOCTIE-X3D7K', false),
+  ('TOCTIE-M8F2P', false),
+  ('TOCTIE-Q5L9R', false),
+  ('TOCTIE-T7C4N', false),
+  ('TOCTIE-B2W6H', false),
+  ('TOCTIE-Y9K3F', false),
+  ('TOCTIE-N4X8D', false),
+  ('TOCTIE-F6P2M', false),
+  ('TOCTIE-W3R7L', false),
+  ('TOCTIE-D8H5T', false),
+  ('TOCTIE-L2Q9B', false),
+  ('TOCTIE-C7Y4X', false),
+  ('TOCTIE-G5N8P', false),
+  ('TOCTIE-V9M3K', false),
+  ('TOCTIE-J4T6R', false),
+  ('TOCTIE-Z8F2W', false)
+ON CONFLICT (code) DO NOTHING;`;
 
 export default function AdminPage() {
   const [secret, setSecret] = useState("");

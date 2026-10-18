@@ -67,19 +67,26 @@ export async function POST(req: Request) {
     const randomIndex = Math.floor(Math.random() * lockedPieces.length);
     const newPiece = lockedPieces[randomIndex];
 
-    // Persist redemption to Supabase / store
-    const { unlockedPieces } = await redeemCode(user, normalizedCode, newPiece);
+    // Persist redemption to Supabase PostgreSQL & Cloud Store
+    const redeemRes = await redeemCode(user, normalizedCode, newPiece);
 
-    const isComplete = unlockedPieces.length === 4;
+    if (!redeemRes.success) {
+      return NextResponse.json(
+        { error: redeemRes.error || "Không thể sử dụng mã này. Vui lòng thử lại." },
+        { status: 400 }
+      );
+    }
+
+    const isComplete = redeemRes.unlockedPieces.length === 4;
 
     return NextResponse.json({
       success: true,
       newPiece,
-      unlockedPieces,
+      unlockedPieces: redeemRes.unlockedPieces,
       isComplete,
       message: isComplete
         ? "Chúc mừng! Bạn đã hoàn thành bộ sưu tập 4 mảnh ghép!"
-        : `Mảnh ghép thứ ${unlockedPieces.length} đã được mở thành công.`,
+        : `Mảnh ghép thứ ${redeemRes.unlockedPieces.length} đã được mở thành công.`,
     });
   } catch {
     return NextResponse.json({ error: "Lỗi server. Vui lòng thử lại." }, { status: 500 });
@@ -92,14 +99,14 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get("userId");
 
-    if (!userId) {
+    if (!userId || !userId.trim()) {
       return NextResponse.json({ error: "Thiếu userId." }, { status: 400 });
     }
 
-    const user = await findUserById(userId);
+    const user = await findUserById(userId.trim());
 
     if (!user) {
-      return NextResponse.json({ error: "Không tìm thấy tài khoản." }, { status: 404 });
+      return NextResponse.json({ error: "Không tìm thấy tài khoản.", notFound: true }, { status: 404 });
     }
 
     return NextResponse.json({
@@ -116,3 +123,4 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Lỗi server." }, { status: 500 });
   }
 }
+

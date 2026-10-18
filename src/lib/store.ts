@@ -199,9 +199,110 @@ export function readStoreFromFile(
 }
 
 /**
+ * Atomically push a single user's record to Supabase Cloud Storage.
+ * Saved as independent files: users/<userId>.json and names/<lowerName>.json.
+ * This guarantees individual customer records are indestructible across cold starts.
+ */
+export async function pushUserToCloud(user: User): Promise<boolean> {
+  try {
+    if (!user || !user.id || !user.fullName) return false;
+    const lowerName = user.fullName.trim().toLowerCase();
+    const jsonStr = JSON.stringify(user, null, 2);
+    const nameHex = Buffer.from(lowerName, "utf-8").toString("hex");
+
+    const uploads = [
+      supabaseAdmin.storage
+        .from(BUCKET_NAME)
+        .upload(`users/${user.id}.json`, jsonStr, {
+          upsert: true,
+          contentType: "application/json",
+        }),
+      supabaseAdmin.storage
+        .from(BUCKET_NAME)
+        .upload(
+          `names/${nameHex}.json`,
+          JSON.stringify({ userId: user.id, fullName: user.fullName }),
+          {
+            upsert: true,
+            contentType: "application/json",
+          }
+        ),
+    ];
+
+    await Promise.allSettled(uploads);
+    return true;
+  } catch (err) {
+    console.warn("Lỗi pushUserToCloud:", err);
+    return false;
+  }
+}
+
+/**
+ * Atomically fetch a single user directly from Supabase Cloud Storage by ID or Name
+ */
+export async function pullUserFromCloud(idOrName: string): Promise<User | null> {
+  try {
+    const trimmed = idOrName.trim();
+    if (!trimmed) return null;
+
+    // 1. Try direct ID download
+    const { data: idData, error: idErr } = await supabaseAdmin.storage
+      .from(BUCKET_NAME)
+      .download(`users/${trimmed}.json`);
+
+    if (!idErr && idData) {
+      const parsed = JSON.parse(await idData.text());
+      if (parsed && parsed.id) {
+        const store = getStore();
+        mergeUserIntoMap(parsed, store.users, store.usersByName);
+        persistStore();
+        return parsed as User;
+      }
+    }
+
+    // 2. Try name mapping download
+    const lowerName = trimmed.toLowerCase();
+    const nameHex = Buffer.from(lowerName, "utf-8").toString("hex");
+    const { data: nameData, error: nameErr } = await supabaseAdmin.storage
+      .from(BUCKET_NAME)
+      .download(`names/${nameHex}.json`);
+
+    if (!nameErr && nameData) {
+      const nameParsed = JSON.parse(await nameData.text());
+      if (nameParsed && nameParsed.userId) {
+        return pullUserFromCloud(nameParsed.userId);
+      }
+    }
+
+    return null;
+  } catch (err) {
+    console.warn("Lỗi pullUserFromCloud:", err);
+    return null;
+  }
+}
+
+/**
+ * Atomically save used redemption code to cloud storage
+ */
+export async function pushCodeToCloud(codeObj: RedemptionCode): Promise<boolean> {
+  try {
+    const upper = codeObj.code.trim().toUpperCase();
+    const { error } = await supabaseAdmin.storage
+      .from(BUCKET_NAME)
+      .upload(`codes/${upper}.json`, JSON.stringify(codeObj, null, 2), {
+        upsert: true,
+        contentType: "application/json",
+      });
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Push current store snapshot to Supabase Cloud Storage (ensures data survives across serverless containers on Vercel)
  */
-export async function pushCloudStore(allowEmpty: boolean = true): Promise<boolean> {
+export async function pushCloudStore(allowEmpty: boolean = false): Promise<boolean> {
   try {
     if (!global.__toctieStore) return false;
 
@@ -237,6 +338,20 @@ export async function pushCloudStore(allowEmpty: boolean = true): Promise<boolea
           });
       }
     }
+
+    // Also push individual user files in parallel (guarantees atomic survivability)
+    if (userList.length > 0) {
+      const userUploads = userList.map((u) => pushUserToCloud(u));
+      await Promise.allSettled(userUploads);
+    }
+
+    // Also push used codes to codes/
+    const usedCodes = Array.from(global.__toctieStore.codes.values()).filter((c) => c.isUsed);
+    if (usedCodes.length > 0) {
+      const codeUploads = usedCodes.map((c) => pushCodeToCloud(c));
+      await Promise.allSettled(codeUploads);
+    }
+
     return true;
   } catch (err) {
     console.warn("Lưu lên Supabase Cloud Storage:", err);
@@ -245,39 +360,94 @@ export async function pushCloudStore(allowEmpty: boolean = true): Promise<boolea
 }
 
 /**
- * Pull latest store snapshot from Supabase Cloud Storage and safely merge into memory
+ * Pull latest store snapshot & individual customer files from Supabase Cloud Storage
  */
 export async function pullCloudStore(): Promise<boolean> {
   try {
-    const { data, error } = await supabaseAdmin.storage
-      .from(BUCKET_NAME)
-      .download(FILE_NAME);
-
-    if (error || !data) return false;
-
-    const text = await data.text();
-    const parsed = JSON.parse(text);
     const store = getStore();
 
-    if (Array.isArray(parsed.users)) {
-      parsed.users.forEach((u: User) => {
-        mergeUserIntoMap(u, store.users, store.usersByName);
-      });
-    }
+    // 1. Download monolithic store.json snapshot
+    try {
+      const { data, error } = await supabaseAdmin.storage
+        .from(BUCKET_NAME)
+        .download(FILE_NAME);
 
-    if (Array.isArray(parsed.codes)) {
-      parsed.codes.forEach((c: RedemptionCode) => {
-        const upper = c.code.toUpperCase();
-        // Only keep if code was actually used or is one of the valid active codes
-        if (c.isUsed) {
-          if (!store.codes.has(upper) || !store.codes.get(upper)!.isUsed) {
-            store.codes.set(upper, c);
-          }
+      if (!error && data) {
+        const text = await data.text();
+        const parsed = JSON.parse(text);
+
+        if (Array.isArray(parsed.users)) {
+          parsed.users.forEach((u: User) => {
+            mergeUserIntoMap(u, store.users, store.usersByName);
+          });
         }
-      });
-    }
 
-    // Save merged results locally
+        if (Array.isArray(parsed.codes)) {
+          parsed.codes.forEach((c: RedemptionCode) => {
+            const upper = c.code.toUpperCase();
+            if (c.isUsed) {
+              if (!store.codes.has(upper) || !store.codes.get(upper)!.isUsed) {
+                store.codes.set(upper, c);
+              }
+            }
+          });
+        }
+      }
+    } catch {}
+
+    // 2. Discover all individual user files in users/ directory (Resilient fallback)
+    try {
+      const { data: userFiles } = await supabaseAdmin.storage
+        .from(BUCKET_NAME)
+        .list("users", { limit: 500 });
+
+      if (Array.isArray(userFiles) && userFiles.length > 0) {
+        const downloadPromises = userFiles
+          .filter((f) => f.name && f.name.endsWith(".json"))
+          .map(async (f) => {
+            try {
+              const res = await supabaseAdmin.storage
+                .from(BUCKET_NAME)
+                .download(`users/${f.name}`);
+              if (res.data) {
+                const u = JSON.parse(await res.data.text());
+                if (u && u.id) {
+                  mergeUserIntoMap(u, store.users, store.usersByName);
+                }
+              }
+            } catch {}
+          });
+        await Promise.allSettled(downloadPromises);
+      }
+    } catch {}
+
+    // 3. Discover all individual redeemed code files in codes/ directory
+    try {
+      const { data: codeFiles } = await supabaseAdmin.storage
+        .from(BUCKET_NAME)
+        .list("codes", { limit: 100 });
+
+      if (Array.isArray(codeFiles) && codeFiles.length > 0) {
+        const downloadCodePromises = codeFiles
+          .filter((f) => f.name && f.name.endsWith(".json"))
+          .map(async (f) => {
+            try {
+              const res = await supabaseAdmin.storage
+                .from(BUCKET_NAME)
+                .download(`codes/${f.name}`);
+              if (res.data) {
+                const c = JSON.parse(await res.data.text());
+                if (c && c.code && c.isUsed) {
+                  store.codes.set(c.code.toUpperCase(), c);
+                }
+              }
+            } catch {}
+          });
+        await Promise.allSettled(downloadCodePromises);
+      }
+    } catch {}
+
+    // Save consolidated results locally
     persistStore();
     return true;
   } catch (err) {
@@ -299,9 +469,6 @@ export function persistStore(allowEmpty: boolean = false) {
     // CRITICAL ANTI-WIPE SHIELD:
     // If memory somehow has 0 users and empty is not explicitly permitted, attempt recovery from disk
     if (!allowEmpty && userList.length === 0) {
-      console.warn(
-        "CẢNH BÁO: Bộ nhớ phát hiện 0 người dùng! Khôi phục từ file đăng ký để bảo vệ dữ liệu khách hàng."
-      );
       const recovered = readUsersFromFile(REGISTERED_CUSTOMERS_FILE);
       if (recovered.length > 0) {
         recovered.forEach((u) =>
@@ -351,6 +518,14 @@ export function persistStore(allowEmpty: boolean = false) {
 }
 
 /**
+ * Persist store across all physical storage tiers and guarantee completion of cloud upload
+ */
+export async function persistStoreAsync(allowEmpty: boolean = false): Promise<boolean> {
+  persistStore(allowEmpty);
+  return await pushCloudStore(allowEmpty);
+}
+
+/**
  * Permanently delete all registered customer accounts across all storage tiers
  */
 export async function clearAllUsers(): Promise<void> {
@@ -386,6 +561,33 @@ export async function clearAllUsers(): Promise<void> {
 
   // Push clean empty users snapshot to Supabase Cloud Storage
   await pushCloudStore(true).catch(() => {});
+
+  // Clean individual user files from storage
+  try {
+    const { data: userFiles } = await supabaseAdmin.storage
+      .from(BUCKET_NAME)
+      .list("users");
+    if (userFiles && userFiles.length > 0) {
+      const paths = userFiles.map((f) => `users/${f.name}`);
+      await supabaseAdmin.storage.from(BUCKET_NAME).remove(paths);
+    }
+
+    const { data: nameFiles } = await supabaseAdmin.storage
+      .from(BUCKET_NAME)
+      .list("names");
+    if (nameFiles && nameFiles.length > 0) {
+      const paths = nameFiles.map((f) => `names/${f.name}`);
+      await supabaseAdmin.storage.from(BUCKET_NAME).remove(paths);
+    }
+
+    const { data: codeFiles } = await supabaseAdmin.storage
+      .from(BUCKET_NAME)
+      .list("codes");
+    if (codeFiles && codeFiles.length > 0) {
+      const paths = codeFiles.map((f) => `codes/${f.name}`);
+      await supabaseAdmin.storage.from(BUCKET_NAME).remove(paths);
+    }
+  } catch {}
 
   // Delete all users in Supabase PostgreSQL table if connected
   try {

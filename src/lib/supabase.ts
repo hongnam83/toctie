@@ -1,5 +1,13 @@
 import { createClient } from "@supabase/supabase-js";
 
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL && typeof window === "undefined") {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { loadEnvConfig } = require("@next/env");
+    loadEnvConfig(process.cwd());
+  } catch {}
+}
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseServiceKey =
   process.env.SUPABASE_SERVICE_ROLE_KEY ||

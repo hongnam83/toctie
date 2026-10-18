@@ -1,12 +1,51 @@
 import { NextResponse } from "next/server";
-import { findUserByName, createUser } from "@/lib/db";
+import { findUserByName, findUserById, createUser, sanitizeUser, verifyPassword } from "@/lib/db";
 
+// GET /api/auth?userId=...&accountName=... — Rehydrate active user session on browser reload
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get("userId");
+    const accountName = searchParams.get("accountName") || searchParams.get("name");
+
+    if ((!userId || !userId.trim()) && (!accountName || !accountName.trim())) {
+      return NextResponse.json({ error: "Thiếu userId hoặc accountName." }, { status: 400 });
+    }
+
+    let user = null;
+    if (userId && userId.trim()) {
+      user = await findUserById(userId.trim());
+    }
+
+    if (!user && accountName && accountName.trim()) {
+      user = await findUserByName(accountName.trim());
+    }
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Không tìm thấy tài khoản người dùng.", notFound: true },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      user: sanitizeUser(user),
+    });
+  } catch (err) {
+    console.error("Lỗi GET /api/auth:", err);
+    return NextResponse.json({ error: "Lỗi server." }, { status: 500 });
+  }
+}
+
+// POST /api/auth — Register, Login, or Auto
 export async function POST(req: Request) {
   try {
     const body = await req.json();
     const rawName = body.accountName || body.fullName || "";
     const rawPhone = typeof body.phone === "string" ? body.phone.trim() : "";
     const rawNote = typeof body.note === "string" ? body.note.trim() : "";
+    const rawPassword = typeof body.password === "string" ? body.password : "";
     const action = body.action || "login";
 
     if (!rawName || typeof rawName !== "string" || !rawName.trim()) {
@@ -32,44 +71,30 @@ export async function POST(req: Request) {
       );
     }
 
-    // Đăng ký tài khoản mới (khách hàng tự đặt tên tài khoản riêng & lưu thông tin tự động)
+    // Đăng ký tài khoản mới (khách hàng tự đặt tên tài khoản riêng & lưu trữ bền vững vĩnh viễn)
     if (action === "register") {
       const existing = await findUserByName(name);
       if (existing) {
-        // Tài khoản đã tồn tại, tự động đăng nhập người dùng an toàn
+        // Tài khoản đã tồn tại, tự động chuyển sang đăng nhập người dùng an toàn
         return NextResponse.json({
           success: true,
           isNew: false,
           alreadyExisted: true,
-          user: {
-            id: existing.id,
-            fullName: existing.fullName,
-            phone: existing.phone,
-            note: existing.note,
-            unlockedPieces: existing.unlockedPieces,
-            redeemedCodes: existing.redeemedCodes,
-          },
+          user: sanitizeUser(existing),
         });
       }
 
-      // Tạo tài khoản mới và lưu trữ bền vững ngay lập tức
-      const user = await createUser(name, "passwordless", rawPhone, rawNote);
+      // Tạo tài khoản mới và lưu trữ bền vững ngay lập tức (await cả Postgres & Cloud Storage)
+      const user = await createUser(name, rawPassword || "passwordless", rawPhone, rawNote);
 
       return NextResponse.json({
         success: true,
         isNew: true,
-        user: {
-          id: user.id,
-          fullName: user.fullName,
-          phone: user.phone,
-          note: user.note,
-          unlockedPieces: user.unlockedPieces,
-          redeemedCodes: user.redeemedCodes,
-        },
+        user: sanitizeUser(user),
       });
     }
 
-    // Đăng nhập bằng tên tài khoản riêng (không cần mật khẩu)
+    // Đăng nhập bằng tên tài khoản riêng
     if (action === "login") {
       const user = await findUserByName(name);
       if (!user) {
@@ -82,16 +107,20 @@ export async function POST(req: Request) {
         );
       }
 
+      // Nếu có mật khẩu bảo mật được cung cấp hoặc tài khoản có mật khẩu riêng
+      if (rawPassword && user.passwordHash && user.passwordHash !== "passwordless") {
+        const isValid = verifyPassword(rawPassword, user.passwordHash);
+        if (!isValid) {
+          return NextResponse.json(
+            { error: "Mật khẩu không chính xác. Vui lòng thử lại." },
+            { status: 401 }
+          );
+        }
+      }
+
       return NextResponse.json({
         success: true,
-        user: {
-          id: user.id,
-          fullName: user.fullName,
-          phone: user.phone,
-          note: user.note,
-          unlockedPieces: user.unlockedPieces,
-          redeemedCodes: user.redeemedCodes,
-        },
+        user: sanitizeUser(user),
       });
     }
 
@@ -100,21 +129,14 @@ export async function POST(req: Request) {
       let user = await findUserByName(name);
       let isNew = false;
       if (!user) {
-        user = await createUser(name, "passwordless", rawPhone, rawNote);
+        user = await createUser(name, rawPassword || "passwordless", rawPhone, rawNote);
         isNew = true;
       }
 
       return NextResponse.json({
         success: true,
         isNew,
-        user: {
-          id: user.id,
-          fullName: user.fullName,
-          phone: user.phone,
-          note: user.note,
-          unlockedPieces: user.unlockedPieces,
-          redeemedCodes: user.redeemedCodes,
-        },
+        user: sanitizeUser(user),
       });
     }
 
@@ -124,3 +146,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Lỗi server. Vui lòng thử lại." }, { status: 500 });
   }
 }
+

@@ -284,30 +284,6 @@ export default function LandingHero({ onOpenAuth }: Props) {
                   </svg>
                 </button>
               </div>
-
-              {/* Boutique Reassurance Row (Authentic, no emojis, no fake SaaS boxes) */}
-              <div className={styles.heroFeatureRow}>
-                <div className={styles.featureItem}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                  <span>Mở góc ngẫu nhiên, không bị trùng</span>
-                </div>
-                <span className={styles.featureDivider}>•</span>
-                <div className={styles.featureItem}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                  <span>Chỉ cần biệt danh để lưu tiến độ</span>
-                </div>
-                <span className={styles.featureDivider}>•</span>
-                <div className={styles.featureItem}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                  <span>Set quà tri ân dịp 20/10</span>
-                </div>
-              </div>
             </div>
           </div>
 

@@ -44,9 +44,14 @@ export async function GET(req: NextRequest) {
       type: "Supabase Cloud Database",
       connected: dbStatus.connected,
       tablesReady: dbStatus.tablesReady,
+      usersTableReady: dbStatus.usersTableReady,
+      codesTableReady: dbStatus.codesTableReady,
+      storageReady: dbStatus.storageReady,
       notice: dbStatus.tablesReady
         ? "Đang kết nối trực tiếp với cơ sở dữ liệu Supabase PostgreSQL."
-        : "Đang kết nối lưu trữ đám mây Supabase Cloud Storage (tự động đồng bộ thời gian thực và bảo vệ dữ liệu tài khoản).",
+        : dbStatus.storageReady
+          ? "Đang kết nối lưu trữ đám mây Supabase Cloud Storage (tự động đồng bộ thời gian thực và bảo vệ dữ liệu tài khoản)."
+          : "Cảnh báo: Chưa kết nối được với dịch vụ lưu trữ Supabase.",
     },
   };
 

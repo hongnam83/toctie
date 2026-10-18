@@ -1,14 +1,18 @@
 // Unified Database Layer for Tóc.Tie Loyalty
-// Connects to Supabase with seamless disk/tmp persisted fallback
+// Connects to Supabase PostgreSQL & Cloud Storage with seamless multi-tier persistence
 
 import { supabaseAdmin } from "./supabase";
 import {
   getStore,
   persistStore,
+  persistStoreAsync,
   generateId,
   simpleHash,
   pushCloudStore,
   pullCloudStore,
+  pushUserToCloud,
+  pullUserFromCloud,
+  pushCodeToCloud,
   User,
   RedemptionCode,
   mergeUserIntoMap,
@@ -17,43 +21,130 @@ import {
   REGISTERED_CUSTOMERS_FILE,
   clearAllUsers,
 } from "./store";
+import { hashPassword, verifyPassword } from "./auth-crypto";
 
-export { simpleHash, generateId, persistStore, pushCloudStore, pullCloudStore, clearAllUsers };
+export {
+  simpleHash,
+  hashPassword,
+  verifyPassword,
+  generateId,
+  persistStore,
+  persistStoreAsync,
+  pushCloudStore,
+  pullCloudStore,
+  pushUserToCloud,
+  pullUserFromCloud,
+  pushCodeToCloud,
+  clearAllUsers,
+};
 export type { User, RedemptionCode };
+
+export interface SanitizedUser {
+  id: string;
+  fullName: string;
+  phone?: string;
+  note?: string;
+  createdAt: string;
+  unlockedPieces: number[];
+  redeemedCodes: string[];
+  isComplete: boolean;
+}
+
+/**
+ * Strips sensitive fields (like passwordHash) before sending to client
+ */
+export function sanitizeUser(u: User): SanitizedUser {
+  return {
+    id: u.id,
+    fullName: u.fullName,
+    phone: u.phone,
+    note: u.note,
+    createdAt: u.createdAt,
+    unlockedPieces: Array.isArray(u.unlockedPieces) ? u.unlockedPieces : [],
+    redeemedCodes: Array.isArray(u.redeemedCodes) ? u.redeemedCodes : [],
+    isComplete: Array.isArray(u.unlockedPieces) && u.unlockedPieces.length === 4,
+  };
+}
 
 let isSupabaseAvailable: boolean | null = null;
 
 /**
- * Check if Supabase connection and storage/tables are functional
+ * Check if Supabase connection, storage, and PostgreSQL tables are functional
  */
 export async function testSupabaseConnection(): Promise<{
   connected: boolean;
   tablesReady: boolean;
+  usersTableReady: boolean;
+  codesTableReady: boolean;
+  storageReady: boolean;
   error?: string;
 }> {
+  let connected = false;
+  let usersTableReady = false;
+  let codesTableReady = false;
+  let storageReady = false;
+  let errorMsg: string | undefined = undefined;
+
+  // 1. Test Supabase Cloud Storage
   try {
-    const { error } = await supabaseAdmin
+    const { error: storageErr } = await supabaseAdmin.storage
+      .from("toctie-store")
+      .list("", { limit: 1 });
+    if (!storageErr) {
+      connected = true;
+      storageReady = true;
+    }
+  } catch {
+    // storage not ready or network issue
+  }
+
+  // 2. Test users table
+  try {
+    const { error: usersErr } = await supabaseAdmin
+      .from("users")
+      .select("id")
+      .limit(1);
+    if (!usersErr) {
+      connected = true;
+      usersTableReady = true;
+    } else if (usersErr.code !== "PGRST205") {
+      connected = true;
+      errorMsg = usersErr.message;
+    }
+  } catch (err) {
+    errorMsg = err instanceof Error ? err.message : String(err);
+  }
+
+  // 3. Test redemption_codes table
+  try {
+    const { error: codesErr } = await supabaseAdmin
       .from("redemption_codes")
       .select("code")
       .limit(1);
-
-    if (error) {
-      // Key works, cloud storage is active, but PostgreSQL tables not run via SQL editor yet
-      return {
-        connected: true,
-        tablesReady: false,
-        error: error.message,
-      };
+    if (!codesErr) {
+      connected = true;
+      codesTableReady = true;
+    } else if (codesErr.code !== "PGRST205") {
+      connected = true;
+      if (!errorMsg) errorMsg = codesErr.message;
     }
-
-    isSupabaseAvailable = true;
-    return { connected: true, tablesReady: true };
-  } catch (err: unknown) {
-    const errorMsg = err instanceof Error ? err.message : String(err);
-    isSupabaseAvailable = false;
-    return { connected: false, tablesReady: false, error: errorMsg };
+  } catch (err) {
+    if (!errorMsg) errorMsg = err instanceof Error ? err.message : String(err);
   }
+
+  const tablesReady = usersTableReady && codesTableReady;
+  isSupabaseAvailable = connected;
+
+  return {
+    connected,
+    tablesReady,
+    usersTableReady,
+    codesTableReady,
+    storageReady,
+    error: errorMsg,
+  };
 }
+
 
 /**
  * Find a user by full name (case-insensitive)
@@ -62,7 +153,7 @@ export async function findUserByName(fullName: string): Promise<User | null> {
   const normalized = fullName.trim();
   const lowerName = normalized.toLowerCase();
 
-  // 1. In-memory check
+  // 1. In-memory check (fastest)
   const store = getStore();
   let userId = store.usersByName.get(lowerName);
   if (userId) {
@@ -70,16 +161,11 @@ export async function findUserByName(fullName: string): Promise<User | null> {
     if (u) return u;
   }
 
-  // 2. Permanent disk file check (restores user even after server restart or dev rebuild)
-  const diskUsers = readUsersFromFile(REGISTERED_CUSTOMERS_FILE);
-  for (const u of diskUsers) {
-    mergeUserIntoMap(u, store.users, store.usersByName);
-  }
-  userId = store.usersByName.get(lowerName);
-  if (userId) {
-    const u = store.users.get(userId);
-    if (u) return u;
-  }
+  // 2. Direct atomic Cloud Storage lookup by Name
+  try {
+    const cloudUser = await pullUserFromCloud(lowerName);
+    if (cloudUser) return cloudUser;
+  } catch {}
 
   // 3. Supabase PostgreSQL check
   try {
@@ -108,7 +194,18 @@ export async function findUserByName(fullName: string): Promise<User | null> {
     // Supabase unavailable, fall through
   }
 
-  // 4. Pull latest snapshot from Supabase Cloud Storage
+  // 4. Permanent disk file check (restores user even after server restart or dev rebuild)
+  const diskUsers = readUsersFromFile(REGISTERED_CUSTOMERS_FILE);
+  for (const u of diskUsers) {
+    mergeUserIntoMap(u, store.users, store.usersByName);
+  }
+  userId = store.usersByName.get(lowerName);
+  if (userId) {
+    const u = store.users.get(userId);
+    if (u) return u;
+  }
+
+  // 5. Pull latest snapshot from Supabase Cloud Storage
   await pullCloudStore().catch(() => { });
   userId = store.usersByName.get(lowerName);
   if (userId) {
@@ -123,26 +220,25 @@ export async function findUserByName(fullName: string): Promise<User | null> {
  * Find a user by ID
  */
 export async function findUserById(id: string): Promise<User | null> {
+  const trimmedId = id.trim();
   const store = getStore();
 
   // 1. In-memory check
-  let user = store.users.get(id);
+  let user = store.users.get(trimmedId);
   if (user) return user;
 
-  // 2. Permanent disk file check
-  const diskUsers = readUsersFromFile(REGISTERED_CUSTOMERS_FILE);
-  for (const u of diskUsers) {
-    mergeUserIntoMap(u, store.users, store.usersByName);
-  }
-  user = store.users.get(id);
-  if (user) return user;
+  // 2. Direct atomic Cloud Storage lookup by ID
+  try {
+    const cloudUser = await pullUserFromCloud(trimmedId);
+    if (cloudUser) return cloudUser;
+  } catch {}
 
   // 3. Supabase PostgreSQL check
   try {
     const { data, error } = await supabaseAdmin
       .from("users")
       .select("*")
-      .eq("id", id)
+      .eq("id", trimmedId)
       .maybeSingle();
 
     if (!error && data) {
@@ -164,9 +260,17 @@ export async function findUserById(id: string): Promise<User | null> {
     // Fall through
   }
 
-  // 4. Try pulling from cloud storage
+  // 4. Permanent disk file check
+  const diskUsers = readUsersFromFile(REGISTERED_CUSTOMERS_FILE);
+  for (const u of diskUsers) {
+    mergeUserIntoMap(u, store.users, store.usersByName);
+  }
+  user = store.users.get(trimmedId);
+  if (user) return user;
+
+  // 5. Try pulling from cloud storage
   await pullCloudStore().catch(() => { });
-  user = store.users.get(id);
+  user = store.users.get(trimmedId);
   return user || null;
 }
 
@@ -175,12 +279,27 @@ export async function findUserById(id: string): Promise<User | null> {
  */
 export async function createUser(
   fullName: string,
-  passwordHash: string = "passwordless",
+  rawPassword?: string,
   phone?: string,
   note?: string,
   initialPieces?: number[]
 ): Promise<User> {
   const name = fullName.trim();
+  if (!name || name.length < 2) {
+    throw new Error("Tên tài khoản phải có ít nhất 2 ký tự.");
+  }
+
+  // Check if user already exists in any storage tier
+  const existing = await findUserByName(name);
+  if (existing) {
+    return existing;
+  }
+
+  // Ensure password is securely hashed via scrypt
+  const secureHash = rawPassword && rawPassword.startsWith("scrypt:v1:")
+    ? rawPassword
+    : hashPassword(rawPassword || "passwordless");
+
   const id = generateId();
   const createdAt = new Date().toISOString();
   const cleanPhone = phone?.trim() || undefined;
@@ -192,35 +311,39 @@ export async function createUser(
     fullName: name,
     phone: cleanPhone,
     note: cleanNote,
-    passwordHash,
+    passwordHash: secureHash,
     createdAt,
     unlockedPieces: pieces,
     redeemedCodes: [],
   };
 
-  // 1. Save to local persistent store & permanent customer registry immediately
-  const store = getStore();
-  mergeUserIntoMap(newUser, store.users, store.usersByName);
-  persistStore();
-
-  // 2. Guarantee persistence to Supabase Cloud Storage across all serverless containers
-  await pushCloudStore().catch(() => { });
-
-  // 3. Sync to Supabase PostgreSQL table if ready
+  // 1. Sync to Supabase PostgreSQL table if table exists
   try {
     await supabaseAdmin.from("users").insert({
       id,
       full_name: name,
       phone: cleanPhone || null,
       note: cleanNote || null,
-      password_hash: passwordHash,
+      password_hash: secureHash,
       unlocked_pieces: pieces,
       redeemed_codes: [],
+      is_complete: pieces.length === 4,
       created_at: createdAt,
+      updated_at: createdAt,
     });
-  } catch {
-    // Postgres table may not be initialized; handled by permanent disk and cloud storage
+  } catch (err) {
+    console.warn("Ngoại lệ khi insert Supabase users:", err);
   }
+
+  // 2. Save to local persistent store & permanent customer registry immediately
+  const store = getStore();
+  mergeUserIntoMap(newUser, store.users, store.usersByName);
+
+  // 3. Atomically push individual user file to Supabase Cloud Storage (indestructible)
+  await pushUserToCloud(newUser);
+
+  // 4. Guarantee persistence to Supabase Cloud Storage across all serverless containers
+  await persistStoreAsync();
 
   return newUser;
 }
@@ -274,8 +397,8 @@ export async function updateUser(
     current.redeemedCodes = updates.redeemedCodes;
   }
 
-  persistStore();
-  await pushCloudStore().catch(() => { });
+  await pushUserToCloud(current);
+  await persistStoreAsync();
 
   try {
     await supabaseAdmin
@@ -286,6 +409,8 @@ export async function updateUser(
         note: current.note || null,
         unlocked_pieces: current.unlockedPieces,
         redeemed_codes: current.redeemedCodes,
+        is_complete: current.unlockedPieces.length === 4,
+        updated_at: new Date().toISOString(),
       })
       .eq("id", userId);
   } catch (err) {
@@ -307,10 +432,17 @@ export async function deleteUser(
     return { success: false, error: "Không tìm thấy người dùng." };
   }
 
+  const nameHex = Buffer.from(user.fullName.toLowerCase(), "utf-8").toString("hex");
+
   store.users.delete(userId);
   store.usersByName.delete(user.fullName.toLowerCase());
-  persistStore();
-  await pushCloudStore().catch(() => { });
+  await persistStoreAsync(true);
+
+  try {
+    await supabaseAdmin.storage
+      .from("toctie-store")
+      .remove([`users/${userId}.json`, `names/${nameHex}.json`]);
+  } catch {}
 
   try {
     await supabaseAdmin.from("users").delete().eq("id", userId);
@@ -351,21 +483,83 @@ export async function getRedemptionCode(code: string): Promise<RedemptionCode | 
 }
 
 /**
- * Redeem a code and award a new puzzle piece to user
+ * Redeem a code and award a new puzzle piece to user with concurrency safety
  */
 export async function redeemCode(
   user: User,
   code: string,
   newPiece: number
-): Promise<{ success: boolean; unlockedPieces: number[] }> {
+): Promise<{ success: boolean; unlockedPieces: number[]; error?: string }> {
   const normalized = code.trim().toUpperCase();
   const now = new Date().toISOString();
-  const updatedPieces = [...user.unlockedPieces, newPiece];
-  const updatedCodes = [...user.redeemedCodes, normalized];
 
-  // 1. Update in local persistent store
+  // Guard: if user already has 4 pieces
+  if (user.unlockedPieces.length >= 4) {
+    return {
+      success: false,
+      error: "Bạn đã mở đủ 4 mảnh ghép rồi! Hãy nhận phần thưởng của bạn.",
+      unlockedPieces: user.unlockedPieces,
+    };
+  }
+
+  // Guard: if user already redeemed this code
+  if (user.redeemedCodes.includes(normalized)) {
+    return {
+      success: false,
+      error: "Bạn đã sử dụng mã này rồi.",
+      unlockedPieces: user.unlockedPieces,
+    };
+  }
+
+  // Guard: if piece is already unlocked
+  if (user.unlockedPieces.includes(newPiece)) {
+    return {
+      success: false,
+      error: "Mảnh ghép này đã được mở rồi.",
+      unlockedPieces: user.unlockedPieces,
+    };
+  }
+
   const store = getStore();
   const memoryCode = store.codes.get(normalized);
+  if (memoryCode && memoryCode.isUsed) {
+    return {
+      success: false,
+      error: "Mã này đã được sử dụng rồi.",
+      unlockedPieces: user.unlockedPieces,
+    };
+  }
+
+  // Concurrency-safe atomic check in Supabase PostgreSQL (if table exists)
+  try {
+    const { data: updatedCodeRows, error: codeErr } = await supabaseAdmin
+      .from("redemption_codes")
+      .update({
+        is_used: true,
+        used_by: user.fullName,
+        used_at: now,
+      })
+      .ilike("code", normalized)
+      .eq("is_used", false)
+      .select();
+
+    if (!codeErr && Array.isArray(updatedCodeRows) && updatedCodeRows.length === 0) {
+      // PostgreSQL table exists and update affected 0 rows -> code was already used concurrently
+      return {
+        success: false,
+        error: "Mã này vừa được sử dụng bởi một tài khoản khác.",
+        unlockedPieces: user.unlockedPieces,
+      };
+    }
+  } catch {
+    // Handled by memory/cloud storage
+  }
+
+  const updatedPieces = [...user.unlockedPieces, newPiece];
+  const updatedCodes = [...user.redeemedCodes, normalized];
+  const isComplete = updatedPieces.length === 4;
+
+  // 1. Update in local persistent store
   if (memoryCode) {
     memoryCode.isUsed = true;
     memoryCode.usedBy = user.fullName;
@@ -376,30 +570,31 @@ export async function redeemCode(
     memoryUser.unlockedPieces = updatedPieces;
     memoryUser.redeemedCodes = updatedCodes;
   }
-  persistStore();
-  await pushCloudStore().catch(() => { });
 
-  // 2. Sync to Supabase
+  // Atomically persist individual user file & redeemed code file to Cloud Storage immediately
+  if (memoryUser) {
+    await pushUserToCloud(memoryUser);
+  }
+  if (memoryCode) {
+    await pushCodeToCloud(memoryCode);
+  }
+
+  // Await store persistence to cloud and disk
+  await persistStoreAsync();
+
+  // 2. Sync user state to Supabase PostgreSQL table
   try {
-    await Promise.all([
-      supabaseAdmin
-        .from("redemption_codes")
-        .update({
-          is_used: true,
-          used_by: user.fullName,
-          used_at: now,
-        })
-        .ilike("code", normalized),
-      supabaseAdmin
-        .from("users")
-        .update({
-          unlocked_pieces: updatedPieces,
-          redeemed_codes: updatedCodes,
-        })
-        .eq("id", user.id),
-    ]);
+    await supabaseAdmin
+      .from("users")
+      .update({
+        unlocked_pieces: updatedPieces,
+        redeemed_codes: updatedCodes,
+        is_complete: isComplete,
+        updated_at: now,
+      })
+      .eq("id", user.id);
   } catch {
-    // Handled by disk persistence
+    // Handled by disk & cloud storage persistence
   }
 
   return { success: true, unlockedPieces: updatedPieces };
@@ -635,19 +830,22 @@ export async function resetUserPassword(
       ? newPassword.trim()
       : `toctie${Math.floor(1000 + Math.random() * 9000)}`;
 
-  const newHash = simpleHash(finalPassword);
+  const newHash = hashPassword(finalPassword);
 
   const store = getStore();
   const memUser = store.users.get(user.id);
   if (memUser) {
     memUser.passwordHash = newHash;
   }
-  persistStore();
+  await persistStoreAsync();
 
   try {
     await supabaseAdmin
       .from("users")
-      .update({ password_hash: newHash })
+      .update({
+        password_hash: newHash,
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", user.id);
   } catch (err) {
     console.warn("Lỗi kết nối Supabase khi đổi mật khẩu:", err);
