@@ -540,7 +540,7 @@ export async function clearAllUsers(): Promise<void> {
   try {
     const { data: userFiles } = await supabaseAdmin.storage
       .from(BUCKET_NAME)
-      .list("users");
+      .list("users", { limit: 1000 });
     if (userFiles && userFiles.length > 0) {
       const paths = userFiles.map((f) => `users/${f.name}`);
       await supabaseAdmin.storage.from(BUCKET_NAME).remove(paths);
@@ -548,7 +548,7 @@ export async function clearAllUsers(): Promise<void> {
 
     const { data: nameFiles } = await supabaseAdmin.storage
       .from(BUCKET_NAME)
-      .list("names");
+      .list("names", { limit: 1000 });
     if (nameFiles && nameFiles.length > 0) {
       const paths = nameFiles.map((f) => `names/${f.name}`);
       await supabaseAdmin.storage.from(BUCKET_NAME).remove(paths);
@@ -556,7 +556,7 @@ export async function clearAllUsers(): Promise<void> {
 
     const { data: codeFiles } = await supabaseAdmin.storage
       .from(BUCKET_NAME)
-      .list("codes");
+      .list("codes", { limit: 1000 });
     if (codeFiles && codeFiles.length > 0) {
       const paths = codeFiles.map((f) => `codes/${f.name}`);
       await supabaseAdmin.storage.from(BUCKET_NAME).remove(paths);

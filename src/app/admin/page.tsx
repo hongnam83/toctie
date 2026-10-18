@@ -330,6 +330,39 @@ export default function AdminPage() {
     }
   };
 
+  // ── XÓA TOÀN BỘ TÀI KHOẢN KHÁCH HÀNG (RESET HỆ THỐNG) ──
+  const handleClearAllUsers = async () => {
+    if (users.length === 0) {
+      alert("Hiện tại không có tài khoản nào trong hệ thống.");
+      return;
+    }
+    if (
+      !window.confirm(
+        `BẠN CÓ CHẮC CHẮN MUỐN XÓA TẤT CẢ ${users.length} TÀI KHOẢN KHÁCH HÀNG KHỎI HỆ THỐNG?\n\nThao tác này sẽ xóa sạch tài khoản test và hoàn lại 20 mã dự thưởng về trạng thái chưa dùng.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/admin?secret=${secret}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "clear-all-users" }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setUserNoticeMsg("Đã xóa sạch toàn bộ tài khoản khách hàng và làm mới hệ thống thành công.");
+        setTimeout(() => setUserNoticeMsg(""), 5000);
+        fetchData(secret);
+      } else {
+        alert(data.error || "Không thể xóa tất cả tài khoản.");
+      }
+    } catch {
+      alert("Lỗi kết nối khi xóa tài khoản.");
+    }
+  };
+
   // ── XUẤT FILE CSV & SAO CHÉP DANH BẠ ──
   const handleExportCSV = () => {
     if (users.length === 0) {
@@ -1012,6 +1045,32 @@ export default function AdminPage() {
                     </svg>
                     Xuất CSV
                   </button>
+                  {users.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleClearAllUsers}
+                      style={{
+                        background: "#fee2e2",
+                        color: "#dc2626",
+                        border: "1px solid #fca5a5",
+                        fontSize: "12px",
+                        padding: "6px 12px",
+                        borderRadius: "8px",
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        fontWeight: 600,
+                      }}
+                      title="Xóa tất cả tài khoản khách hàng test"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                      Xóa tất cả ({users.length})
+                    </button>
+                  )}
                   <input
                     type="text"
                     className={styles.searchInput}

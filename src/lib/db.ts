@@ -432,23 +432,52 @@ export async function deleteUser(
   userId: string
 ): Promise<{ success: boolean; error?: string }> {
   const store = getStore();
-  const user = store.users.get(userId);
+  let user = store.users.get(userId);
+
+  // Tra cứu thêm nếu chưa có trong RAM
   if (!user) {
-    return { success: false, error: "Không tìm thấy người dùng." };
+    user = (await findUserById(userId)) || undefined;
   }
 
-  const nameHex = Buffer.from(user.fullName.toLowerCase(), "utf-8").toString("hex");
+  // Thu hồi các mã dự thưởng mà tài khoản này đã dùng để trả lại trạng thái chưa sử dụng
+  if (user && Array.isArray(user.redeemedCodes)) {
+    for (const code of user.redeemedCodes) {
+      const upper = code.toUpperCase();
+      const codeObj = store.codes.get(upper);
+      if (codeObj) {
+        codeObj.isUsed = false;
+        codeObj.usedBy = undefined;
+        codeObj.usedAt = undefined;
+      }
+      supabaseAdmin
+        .from("redemption_codes")
+        .update({ is_used: false, used_by: null, used_at: null })
+        .eq("code", upper)
+        .then(() => {}, () => {});
+      supabaseAdmin.storage
+        .from("toctie-store")
+        .remove([`codes/${upper}.json`])
+        .then(() => {}, () => {});
+    }
+  }
+
+  const fullName = user?.fullName || "";
+  const nameHex = fullName ? Buffer.from(fullName.toLowerCase(), "utf-8").toString("hex") : "";
 
   store.users.delete(userId);
-  store.usersByName.delete(user.fullName.toLowerCase());
+  if (fullName) {
+    store.usersByName.delete(fullName.toLowerCase());
+  }
   await persistStoreAsync(true);
 
+  // Xóa file cá nhân trong Supabase Cloud Storage
   try {
-    await supabaseAdmin.storage
-      .from("toctie-store")
-      .remove([`users/${userId}.json`, `names/${nameHex}.json`]);
+    const toRemove = [`users/${userId}.json`];
+    if (nameHex) toRemove.push(`names/${nameHex}.json`);
+    await supabaseAdmin.storage.from("toctie-store").remove(toRemove);
   } catch {}
 
+  // Xóa tài khoản trong Supabase PostgreSQL table
   try {
     await supabaseAdmin.from("users").delete().eq("id", userId);
   } catch (err) {
