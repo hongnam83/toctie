@@ -116,6 +116,14 @@ async function runTests() {
   const { persistStoreAsync } = await import("../src/lib/store");
   await persistStoreAsync(true);
 
+  // Dọn dẹp cả trong Supabase PostgreSQL
+  const { supabaseAdmin } = await import("../src/lib/supabase");
+  await supabaseAdmin.from("users").delete().eq("id", createdUser.id);
+  await supabaseAdmin
+    .from("redemption_codes")
+    .update({ is_used: false, used_by: null, used_at: null })
+    .eq("code", "TOCTIE-K7M9X");
+
   console.log("\n=== TẤT CẢ CÁC BÀI KIỂM THỬ ĐÃ ĐẠT 100%! ===");
 }
 

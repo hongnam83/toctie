@@ -159,25 +159,26 @@ export async function findUserByName(fullName: string): Promise<User | null> {
       .from("users")
       .select("*")
       .ilike("full_name", normalized)
-      .maybeSingle();
+      .limit(1);
 
-    if (!error && data) {
+    const row = data && data.length > 0 ? data[0] : null;
+    if (!error && row) {
       const u: User = {
-        id: data.id,
-        fullName: data.full_name,
-        phone: data.phone || undefined,
-        note: data.note || undefined,
-        passwordHash: data.password_hash,
-        createdAt: data.created_at,
-        unlockedPieces: data.unlocked_pieces || [],
-        redeemedCodes: data.redeemed_codes || [],
+        id: row.id,
+        fullName: row.full_name,
+        phone: row.phone || undefined,
+        note: row.note || undefined,
+        passwordHash: row.password_hash,
+        createdAt: row.created_at,
+        unlockedPieces: row.unlocked_pieces || [],
+        redeemedCodes: row.redeemed_codes || [],
       };
       const store = getStore();
       mergeUserIntoMap(u, store.users, store.usersByName);
       return u;
     }
-  } catch {
-    // Supabase unavailable, fall through
+  } catch (err) {
+    console.warn("Lỗi tra cứu Supabase users:", err);
   }
 
   // 2. In-memory check (fast fallback)
@@ -317,9 +318,9 @@ export async function createUser(
     redeemedCodes: [],
   };
 
-  // 1. Sync to Supabase PostgreSQL table if table exists
+  // 1. Sync to Supabase PostgreSQL table with upsert and error handling
   try {
-    await supabaseAdmin.from("users").insert({
+    const { error: insertErr } = await supabaseAdmin.from("users").upsert({
       id,
       full_name: name,
       phone: cleanPhone || null,
@@ -330,9 +331,13 @@ export async function createUser(
       is_complete: pieces.length === 4,
       created_at: createdAt,
       updated_at: createdAt,
-    });
+    }, { onConflict: "id" });
+
+    if (insertErr) {
+      console.error("LỖI SUPABASE POSTGRESQL INSERT/UPSERT:", insertErr);
+    }
   } catch (err) {
-    console.warn("Ngoại lệ khi insert Supabase users:", err);
+    console.error("NGOẠI LỆ KHI INSERT SUPABASE USERS:", err);
   }
 
   // 2. Save to local persistent store & permanent customer registry immediately
@@ -639,10 +644,8 @@ export async function getAdminData(): Promise<{
       supabaseAdmin.from("redemption_codes").select("*").order("code", { ascending: true }),
     ]);
 
-    if (!usersRes.error && !codesRes.error && usersRes.data && codesRes.data) {
-      store.users.clear();
-      store.usersByName.clear();
-
+    if (!usersRes.error && usersRes.data) {
+      // Merge all users from Supabase PostgreSQL without destroying pending local users
       usersRes.data.forEach((u) => {
         const pieces = u.unlocked_pieces || [];
         const userObj: User = {
@@ -658,6 +661,27 @@ export async function getAdminData(): Promise<{
         mergeUserIntoMap(userObj, store.users, store.usersByName);
       });
 
+      // Two-way sync: backfill any locally registered customers into Supabase PostgreSQL if missing
+      for (const localUser of Array.from(store.users.values())) {
+        const inDb = usersRes.data.some((d: any) => d.id === localUser.id || d.full_name.toLowerCase() === localUser.fullName.toLowerCase());
+        if (!inDb) {
+          supabaseAdmin.from("users").upsert({
+            id: localUser.id,
+            full_name: localUser.fullName,
+            phone: localUser.phone || null,
+            note: localUser.note || null,
+            password_hash: localUser.passwordHash,
+            unlocked_pieces: localUser.unlockedPieces,
+            redeemed_codes: localUser.redeemedCodes,
+            is_complete: localUser.unlockedPieces.length === 4,
+            created_at: localUser.createdAt,
+            updated_at: localUser.createdAt,
+          }, { onConflict: "id" }).then(() => {}, () => {});
+        }
+      }
+    }
+
+    if (!codesRes.error && codesRes.data) {
       codesRes.data.forEach((c) => {
         const upper = c.code.toUpperCase();
         store.codes.set(upper, {
@@ -667,9 +691,9 @@ export async function getAdminData(): Promise<{
           usedAt: c.used_at || undefined,
         });
       });
-
-      persistStore();
     }
+
+    persistStore();
   } catch {
     // Fallback to local store
   }

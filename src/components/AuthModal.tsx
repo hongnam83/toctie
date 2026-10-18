@@ -38,7 +38,8 @@ export default function AuthModal({ onClose, onSuccess }: Props) {
       return;
     }
 
-    const action = forceAction || tab;
+    // Dùng action: "auto" để khách hàng mới luôn được tạo tài khoản và lưu ngay lập tức, không bị báo lỗi 404
+    const action = forceAction || (tab === "login" ? "auto" : "register");
     setLoading(true);
 
     try {

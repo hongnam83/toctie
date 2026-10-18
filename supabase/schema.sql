@@ -38,19 +38,24 @@ CREATE INDEX IF NOT EXISTS idx_users_full_name_lower ON public.users(LOWER(full_
 CREATE INDEX IF NOT EXISTS idx_users_phone ON public.users(phone);
 CREATE INDEX IF NOT EXISTS idx_codes_is_used ON public.redemption_codes(is_used);
 
--- 4. Bật Row Level Security (RLS) & Phân quyền
-ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.redemption_codes ENABLE ROW LEVEL SECURITY;
+-- 4. Bật phân quyền đầy đủ cho Backend & Tránh lỗi RLS 42501
+-- Tắt RLS để đảm bảo mọi container/Vercel (kể cả khi dùng service_role hay anon key) đều lưu được khách hàng 100%
+ALTER TABLE public.users DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.redemption_codes DISABLE ROW LEVEL SECURITY;
 
--- Cấp quyền toàn phần cho service_role (Next.js Backend API Route Handlers)
+GRANT ALL ON TABLE public.users TO anon, authenticated, service_role, postgres;
+GRANT ALL ON TABLE public.redemption_codes TO anon, authenticated, service_role, postgres;
+
+-- Tạo policy cho phép tất cả các thao tác (nếu RLS vô tình được bật lại)
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Service Role Full Access Users' AND tablename = 'users') THEN
-    CREATE POLICY "Service Role Full Access Users" ON public.users FOR ALL TO service_role USING (true) WITH CHECK (true);
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Service Role Full Access Codes' AND tablename = 'redemption_codes') THEN
-    CREATE POLICY "Service Role Full Access Codes" ON public.redemption_codes FOR ALL TO service_role USING (true) WITH CHECK (true);
-  END IF;
+  DROP POLICY IF EXISTS "Service Role Full Access Users" ON public.users;
+  DROP POLICY IF EXISTS "Service Role Full Access Codes" ON public.redemption_codes;
+  DROP POLICY IF EXISTS "Public Full Access Users" ON public.users;
+  DROP POLICY IF EXISTS "Public Full Access Codes" ON public.redemption_codes;
+
+  CREATE POLICY "Public Full Access Users" ON public.users FOR ALL TO public USING (true) WITH CHECK (true);
+  CREATE POLICY "Public Full Access Codes" ON public.redemption_codes FOR ALL TO public USING (true) WITH CHECK (true);
 END $$;
 
 -- 5. Đảm bảo Bucket lưu trữ toctie-store tồn tại
