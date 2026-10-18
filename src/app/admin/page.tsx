@@ -84,6 +84,10 @@ BEGIN
   END IF;
 END $$;
 
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('toctie-store', 'toctie-store', false)
+ON CONFLICT (id) DO NOTHING;
+
 INSERT INTO public.redemption_codes (code, is_used)
 VALUES
   ('TOCTIE-K7M9X', false),
