@@ -133,8 +133,6 @@ export default function AdminPage() {
 
   // Customer registration states (Thêm & Lưu thông tin khách hàng)
   const [newCustomerName, setNewCustomerName] = useState("");
-  const [newCustomerPhone, setNewCustomerPhone] = useState("");
-  const [newCustomerNote, setNewCustomerNote] = useState("");
   const [newCustomerPieces, setNewCustomerPieces] = useState<number>(0);
   const [addCustomerMsg, setAddCustomerMsg] = useState("");
   const [addCustomerLoading, setAddCustomerLoading] = useState(false);
@@ -215,8 +213,6 @@ export default function AdminPage() {
         body: JSON.stringify({
           action: "create-user",
           fullName: trimmedName,
-          phone: newCustomerPhone.trim(),
-          note: newCustomerNote.trim(),
           initialPieceCount: Number(newCustomerPieces) || 0,
         }),
       });
@@ -230,8 +226,6 @@ export default function AdminPage() {
 
       setAddCustomerMsg(data.message || `Đã lưu khách hàng "${trimmedName}" thành công.`);
       setNewCustomerName("");
-      setNewCustomerPhone("");
-      setNewCustomerNote("");
       setNewCustomerPieces(0);
       setTimeout(() => setAddCustomerMsg(""), 5000);
       fetchData(secret);
@@ -931,32 +925,6 @@ export default function AdminPage() {
                     value={newCustomerName}
                     onChange={(e) => setNewCustomerName(e.target.value)}
                     required
-                  />
-                </div>
-
-                <div>
-                  <label style={{ fontSize: "13px", fontWeight: 700, color: "var(--navy)", display: "block", marginBottom: "4px" }}>
-                    Số điện thoại (tùy chọn):
-                  </label>
-                  <input
-                    type="text"
-                    className="input-field"
-                    placeholder="VD: 0912345678"
-                    value={newCustomerPhone}
-                    onChange={(e) => setNewCustomerPhone(e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ fontSize: "13px", fontWeight: 700, color: "var(--navy)", display: "block", marginBottom: "4px" }}>
-                    Ghi chú khách hàng (tùy chọn):
-                  </label>
-                  <input
-                    type="text"
-                    className="input-field"
-                    placeholder="VD: Khách Zalo, quà tặng sinh nhật..."
-                    value={newCustomerNote}
-                    onChange={(e) => setNewCustomerNote(e.target.value)}
                   />
                 </div>
 
