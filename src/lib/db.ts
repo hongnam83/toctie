@@ -335,6 +335,10 @@ export async function createUser(
 
     if (insertErr) {
       console.error("LỖI SUPABASE POSTGRESQL INSERT/UPSERT:", insertErr);
+      if (insertErr.code === "23505") {
+        const fallback = await findUserByName(name);
+        if (fallback) return fallback;
+      }
     }
   } catch (err) {
     console.error("NGOẠI LỆ KHI INSERT SUPABASE USERS:", err);
